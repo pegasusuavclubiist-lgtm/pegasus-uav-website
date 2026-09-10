@@ -11,7 +11,6 @@ import DroneDeliveryDivider from "@/components/DroneDeliveryDivider";
 import Projects from "@/components/Projects";
 import Team from "@/components/Team";
 import Mentors from "@/components/Mentors";
-import Updates from "@/components/Updates";
 import RequestInventory from "@/components/RequestInventory";
 import JoinUs from "@/components/JoinUs";
 import Footer from "@/components/Footer";
@@ -45,7 +44,6 @@ export default function Home() {
         <Projects />
         <Team />
         <Mentors />
-        <Updates />
         <RequestInventory />
         <JoinUs />
       </main>

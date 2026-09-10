@@ -5,8 +5,8 @@ import Link from "next/link";
 import { siteData } from "@/data/data";
 
 interface AdminHeaderProps {
-  activeTab: "updates" | "inventory";
-  onTabChange: (tab: "updates" | "inventory") => void;
+  activeTab: "updates" | "inventory" | "members" | "projects";
+  onTabChange: (tab: "updates" | "inventory" | "members" | "projects") => void;
   onLock: () => void;
   supabaseConnected: boolean;
   adminEmail?: string;
@@ -66,7 +66,7 @@ export default function AdminHeader({
             )}
 
             <Link
-              href="/#updates"
+              href="/"
               className="hover:text-[#e2f952] underline underline-offset-4 transition-colors"
             >
               ← RETURN TO PUBLIC SITE

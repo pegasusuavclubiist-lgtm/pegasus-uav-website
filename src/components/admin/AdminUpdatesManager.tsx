@@ -31,7 +31,10 @@ export default function AdminUpdatesManager() {
   // Search filter
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Load existing posts
+  // SQL Helper modal state
+  const [showSqlHelper, setShowSqlHelper] = useState(false);
+
+  // Load existing dispatches
   const loadPosts = async () => {
     setLoading(true);
     try {
@@ -55,14 +58,19 @@ export default function AdminUpdatesManager() {
 
     setSelectedFile(file);
     setUploadingFile(true);
-    setStatusMessage({ type: "info", text: "UPLOADING IMAGE TO SUPABASE MEDIA BUCKET..." });
+    setStatusMessage({ type: "info", text: "UPLOADING ATTACHMENT TO MEDIA STORAGE..." });
 
     const res = await uploadUpdateMedia(file);
     setUploadingFile(false);
 
     if (res.success && res.publicUrl) {
       setImageUrl(res.publicUrl);
-      setStatusMessage({ type: "success", text: "IMAGE ATTACHED & HOSTED SUCCESSFULLY" });
+      setStatusMessage({
+        type: "success",
+        text: res.isRlsFallback
+          ? "IMAGE OPTIMIZED & ATTACHED (LOCAL HYBRID FALLBACK)"
+          : "IMAGE ATTACHED & HOSTED SUCCESSFULLY",
+      });
       setTimeout(() => setStatusMessage(null), 3500);
     } else {
       setStatusMessage({
@@ -81,7 +89,7 @@ export default function AdminUpdatesManager() {
     }
 
     setSubmitting(true);
-    setStatusMessage({ type: "info", text: "TRANSMITTING DISPATCH TO PUBLIC FEED..." });
+    setStatusMessage({ type: "info", text: "TRANSMITTING CADRE OPERATIONAL DISPATCH..." });
 
     const payload = {
       title: title.trim(),
@@ -96,8 +104,8 @@ export default function AdminUpdatesManager() {
       setStatusMessage({
         type: "success",
         text: res.isRlsError
-          ? "POST SAVED (CACHED LOCALLY — RUN SQL MIGRATION TO SYNC POSTGRES RLS)"
-          : "MISSION DISPATCH TRANSMITTED TO PUBLIC FEED SUCCESSFULLY",
+          ? "DISPATCH SAVED (CACHED LOCALLY — RUN SQL MIGRATION TO SYNC POSTGRES RLS)"
+          : "CADRE DISPATCH LOGGED & TRANSMITTED SUCCESSFULLY",
       });
 
       // Reset form
@@ -133,7 +141,7 @@ export default function AdminUpdatesManager() {
     setDeleteTarget(null);
 
     if (res.success) {
-      setStatusMessage({ type: "success", text: "POST EXPUNGED FROM CADRE FEED" });
+      setStatusMessage({ type: "success", text: "DISPATCH EXPUNGED FROM CADRE LOGS" });
       setTimeout(() => setStatusMessage(null), 3000);
     } else {
       setStatusMessage({
@@ -151,6 +159,30 @@ export default function AdminUpdatesManager() {
 
   return (
     <div className="space-y-10">
+      {/* Header telemetry and SQL helper button */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#e2f952]" />
+            <span className="font-mono text-xs uppercase tracking-widest text-[#e2f952] font-bold">
+              [ APEX CONTROL // CADRE DISPATCH MATRIX ]
+            </span>
+          </div>
+          <p className="font-mono text-xs text-neutral-400 mt-1">
+            Internal console for operational flight bulletins, cadence debriefs, and technical logs (Admin Exclusive).
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowSqlHelper(true)}
+            className="px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-amber-400 hover:text-white bg-amber-950/30 border border-amber-500/40 hover:border-amber-400 transition-colors"
+          >
+            [ SQL RLS HELPER ]
+          </button>
+        </div>
+      </div>
+
       {/* Status Bar */}
       {statusMessage && (
         <div
@@ -185,11 +217,11 @@ export default function AdminUpdatesManager() {
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#e2f952]" />
               <h2 className="font-mono text-xs uppercase tracking-widest text-[#e2f952] font-bold">
-                [ 01 // TRANSMIT DISPATCH ]
+                [ 01 // TRANSMIT CADRE DISPATCH ]
               </h2>
             </div>
             <span className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest">
-              PUBLIC FEED INTAKE
+              CADRE INTERNAL INTAKE
             </span>
           </div>
 
@@ -223,7 +255,7 @@ export default function AdminUpdatesManager() {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 rows={5}
-                placeholder="Detailed flight bulletin, test results, or links to drive/docs (e.g. https://drive.google.com/...)"
+                placeholder="Detailed flight bulletin, test results, or links to internal CADRE documents (e.g. https://drive.google.com/...)"
                 className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-4 py-3 outline-none transition-colors resize-y leading-relaxed"
                 required
               />
@@ -247,7 +279,7 @@ export default function AdminUpdatesManager() {
                   />
                   <div className="font-mono text-xs text-neutral-400 flex flex-col items-center gap-1">
                     <span className="text-[#e2f952]">
-                      {uploadingFile ? "UPLOADING TO CLOUD STORAGE..." : "CHOOSE OR DROP IMAGE FILE"}
+                      {uploadingFile ? "UPLOADING TO STORAGE..." : "CHOOSE OR DROP IMAGE FILE"}
                     </span>
                     <span className="text-[10px] text-neutral-500">
                       PNG, JPG, WEBP (STORED IN PEGASUS MEDIA BUCKET)
@@ -303,7 +335,7 @@ export default function AdminUpdatesManager() {
               disabled={submitting || uploadingFile}
               className="w-full bg-[#e2f952] text-black font-mono font-bold text-xs uppercase tracking-widest py-3.5 px-6 hover:bg-[#c8e036] active:scale-[0.99] disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(226,249,82,0.2)]"
             >
-              <span>{submitting ? "TRANSMITTING POST..." : "PUBLISH TO PUBLIC FEED"}</span>
+              <span>{submitting ? "TRANSMITTING DISPATCH..." : "LOG CADRE DISPATCH"}</span>
               <span>→</span>
             </button>
           </form>
@@ -318,14 +350,14 @@ export default function AdminUpdatesManager() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs uppercase tracking-widest text-[#e2f952] font-bold">
-                  [ 02 // ACTIVE FEED ARCHIVE ]
+                  [ 02 // CADRE OPERATIONAL LOGS ]
                 </span>
                 <span className="font-mono text-xs text-neutral-500">
                   ({updates.length} DISPATCHES)
                 </span>
               </div>
               <p className="font-mono text-[11px] text-neutral-400 mt-1">
-                Live posts currently displayed in the main website Updates module
+                Internal operational bulletins and flight briefings for authorized personnel
               </p>
             </div>
 
@@ -334,7 +366,7 @@ export default function AdminUpdatesManager() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="SEARCH POSTS..."
+                placeholder="SEARCH DISPATCHES..."
                 className="bg-neutral-900 border border-white/15 focus:border-[#e2f952] text-white font-mono text-xs px-3 py-1.5 outline-none uppercase"
               />
               <button
@@ -354,7 +386,7 @@ export default function AdminUpdatesManager() {
             </div>
           ) : filteredUpdates.length === 0 ? (
             <div className="py-20 text-center border border-white/10 bg-white/[0.01] p-8 font-mono text-xs text-neutral-500 uppercase tracking-widest">
-              [ NO MATCHING POSTS FOUND ]
+              [ NO MATCHING DISPATCHES FOUND ]
             </div>
           ) : (
             <div className="space-y-4 max-h-[720px] overflow-y-auto pr-2 custom-scrollbar">
@@ -451,7 +483,7 @@ export default function AdminUpdatesManager() {
             </div>
 
             <h3 className="text-xl font-bold uppercase tracking-tight text-white mb-2">
-              Expunge Mission Dispatch?
+              Expunge Cadre Dispatch?
             </h3>
             <p className="font-mono text-xs text-neutral-400 mb-6 leading-relaxed">
               Are you sure you want to permanently delete:
@@ -459,7 +491,7 @@ export default function AdminUpdatesManager() {
               <span className="text-white font-bold block mt-1">
                 &ldquo;{deleteTarget.title}&rdquo;
               </span>
-              This will remove it from the public homepage immediately.
+              This will permanently purge this dispatch from the cadre flight log.
             </p>
 
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10 font-mono text-xs uppercase">
@@ -475,6 +507,66 @@ export default function AdminUpdatesManager() {
                 className="px-5 py-2 bg-red-600 hover:bg-red-500 text-white font-bold transition-colors shadow-[0_0_15px_rgba(239,68,68,0.4)]"
               >
                 {deletingId === deleteTarget.id ? "DELETING..." : "CONFIRM DELETE"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          SQL RLS HELPER MODAL
+         ========================================================================= */}
+      {showSqlHelper && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-neutral-950 border border-[#e2f952]/40 max-w-2xl w-full p-6 sm:p-8 space-y-5 shadow-[0_0_50px_rgba(226,249,82,0.15)]">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#e2f952]" />
+                <h3 className="font-mono text-sm font-bold uppercase tracking-widest text-[#e2f952]">
+                  [ SUPABASE RLS POLICIES FOR UPDATES TABLE ]
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowSqlHelper(false)}
+                className="text-neutral-400 hover:text-white font-mono text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="font-mono text-xs text-neutral-300 space-y-3 leading-relaxed">
+              <p>
+                To enable uninhibited insert and delete operations directly in Supabase Postgres (bypassing RLS error 42501), run this in your Supabase SQL Editor:
+              </p>
+
+              <pre className="bg-neutral-900 border border-white/15 p-4 text-[11px] text-[#e2f952] overflow-x-auto select-all">
+{`-- Enable RLS and grant read/write on updates table:
+ALTER TABLE public.updates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read updates" ON public.updates;
+DROP POLICY IF EXISTS "Allow public insert updates" ON public.updates;
+DROP POLICY IF EXISTS "Allow public delete updates" ON public.updates;
+
+CREATE POLICY "Allow public read updates" ON public.updates FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow public insert updates" ON public.updates FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Allow public delete updates" ON public.updates FOR DELETE TO anon, authenticated USING (true);
+
+-- Storage bucket media policies:
+CREATE POLICY "Allow public uploads to media" ON storage.objects FOR INSERT TO anon, authenticated WITH CHECK (bucket_id = 'media');
+CREATE POLICY "Allow public read media" ON storage.objects FOR SELECT TO anon, authenticated USING (bucket_id = 'media');`}
+              </pre>
+
+              <p className="text-neutral-400 text-[11px]">
+                Note: Local offline caching and automatic sync are always active, ensuring no dispatches are lost even if RLS is strict.
+              </p>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-white/10">
+              <button
+                onClick={() => setShowSqlHelper(false)}
+                className="px-5 py-2 bg-[#e2f952] text-black font-mono font-bold text-xs uppercase tracking-widest hover:bg-[#c8e036]"
+              >
+                [ CLOSE ]
               </button>
             </div>
           </div>

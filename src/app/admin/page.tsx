@@ -5,6 +5,8 @@ import AdminAuthGate from "@/components/admin/AdminAuthGate";
 import AdminHeader from "@/components/admin/AdminHeader";
 import AdminUpdatesManager from "@/components/admin/AdminUpdatesManager";
 import AdminInventoryManager from "@/components/admin/AdminInventoryManager";
+import AdminMembersManager from "@/components/admin/AdminMembersManager";
+import AdminProjectsManager from "@/components/admin/AdminProjectsManager";
 import { siteData } from "@/data/data";
 import { createClient } from "@/lib/supabase/client";
 
@@ -12,7 +14,7 @@ export default function AdminPage() {
   const { admin } = siteData;
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [adminEmail, setAdminEmail] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"updates" | "inventory">("updates");
+  const [activeTab, setActiveTab] = useState<"updates" | "inventory" | "members" | "projects">("updates");
   const [supabaseConnected, setSupabaseConnected] = useState<boolean>(false);
 
   // Check auth session
@@ -85,11 +87,23 @@ export default function AdminPage() {
             <div className="flex items-center gap-3 mb-2 font-mono text-xs uppercase tracking-widest text-[#e2f952]">
               <span className="w-2 h-2 rounded-full bg-[#e2f952] animate-pulse" />
               <span>
-                [ {activeTab === "updates" ? "MODULE 01 — MISSION DISPATCHES" : "MODULE 02 — HARDWARE INVENTORY"} ]
+                [ {activeTab === "updates"
+                    ? "MODULE 01 — CADRE MISSION DISPATCHES"
+                    : activeTab === "inventory"
+                    ? "MODULE 02 — HARDWARE INVENTORY"
+                    : activeTab === "members"
+                    ? "MODULE 03 — CORE PERSONNEL CADRE"
+                    : "MODULE 04 — FLIGHT RESEARCH & PROJECTS"} ]
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-tight text-white">
-              {activeTab === "updates" ? "Mission Updates & Bulletins" : "Club Avionics & Hardware Inventory"}
+              {activeTab === "updates"
+                ? "Cadre Updates & Operational Bulletins"
+                : activeTab === "inventory"
+                ? "Club Avionics & Hardware Inventory"
+                : activeTab === "members"
+                ? "Flight Roster & Core Personnel Cadre"
+                : "Ongoing Builds & Autonomous Projects"}
             </h2>
           </div>
 
@@ -101,7 +115,15 @@ export default function AdminPage() {
         </div>
 
         {/* Tab Module Display */}
-        {activeTab === "updates" ? <AdminUpdatesManager /> : <AdminInventoryManager />}
+        {activeTab === "updates" ? (
+          <AdminUpdatesManager />
+        ) : activeTab === "inventory" ? (
+          <AdminInventoryManager />
+        ) : activeTab === "members" ? (
+          <AdminMembersManager />
+        ) : (
+          <AdminProjectsManager />
+        )}
       </main>
 
       {/* Tactical Console Footer */}

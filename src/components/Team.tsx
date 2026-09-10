@@ -255,6 +255,11 @@ export default function Team() {
                           <p className="mt-1.5 font-mono text-xs uppercase tracking-wider text-neutral-400">
                             {member.role}
                           </p>
+                          {member.subsystem && (
+                            <p className="mt-2 font-mono text-[11px] text-neutral-500 line-clamp-2 leading-relaxed">
+                              {member.subsystem}
+                            </p>
+                          )}
                         </div>
 
                         {/* Bottom Active Status Line */}
@@ -298,6 +303,7 @@ export default function Team() {
                 alt={activeMember.name}
                 fill
                 sizes="250px"
+                unoptimized={Boolean(activeMember.imageUrl?.startsWith("data:"))}
                 className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
@@ -311,6 +317,11 @@ export default function Team() {
               <p className="font-mono text-[11px] uppercase tracking-wider text-[#e2f952] mt-0.5">
                 {activeMember.role}
               </p>
+              {activeMember.subsystem && (
+                <p className="mt-2 pt-1.5 border-t border-white/10 font-mono text-[10px] text-neutral-300 leading-relaxed line-clamp-3">
+                  {activeMember.subsystem}
+                </p>
+              )}
               <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between font-mono text-[9px] text-neutral-400 uppercase tracking-widest">
                 <span>IIST UAV // CADRE</span>
                 <span className="text-[#e2f952]">VERIFIED</span>

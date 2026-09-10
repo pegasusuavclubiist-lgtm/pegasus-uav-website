@@ -22,13 +22,115 @@ export interface UpdateMutationResponse {
 }
 
 const LOCAL_UPDATES_KEY = 'pegasus_local_updates_cache'
+const LOCAL_UPDATES_DELETED_KEY = 'pegasus_local_updates_deleted'
+
+/**
+ * Convert an image File to an optimized base64 Data URL.
+ * Scales image to maximum 1200x800 and compresses as JPEG 0.85 for optimal display & payload size.
+ */
+async function fileToOptimizedDataUrl(file: File, maxDim = 1200, quality = 0.85): Promise<string> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') {
+      resolve('')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const result = e.target?.result as string
+      if (!result) {
+        resolve('')
+        return
+      }
+
+      const img = new window.Image()
+      img.onload = () => {
+        let width = img.width
+        let height = img.height
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width)
+            width = maxDim
+          } else {
+            width = Math.round((width * maxDim) / height)
+            height = maxDim
+          }
+        }
+
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height)
+          resolve(canvas.toDataURL('image/jpeg', quality))
+          return
+        }
+        resolve(result)
+      }
+      img.onerror = () => resolve(result)
+      img.src = result
+    }
+    reader.onerror = () => resolve('')
+    reader.readAsDataURL(file)
+  })
+}
+
+/**
+ * Synchronize any previously cached local updates to Supabase database.
+ */
+export async function syncLocalUpdatesToSupabase(): Promise<number> {
+  if (typeof window === 'undefined') return 0
+
+  const supabase = createClient()
+  try {
+    const localStr = localStorage.getItem(LOCAL_UPDATES_KEY)
+    if (!localStr) return 0
+
+    const localList: SupabaseUpdate[] = JSON.parse(localStr)
+    const pending = localList.filter((u) => u.id.startsWith('local-post-'))
+    if (pending.length === 0) return 0
+
+    let syncedCount = 0
+    let updatedList = [...localList]
+
+    for (const u of pending) {
+      const { data, error } = await supabase.from('updates').insert([{
+        title: u.title.trim(),
+        content: u.content.trim(),
+        image_url: u.image_url?.trim() || null,
+      }]).select()
+
+      if (!error && data && data[0]) {
+        syncedCount++
+        updatedList = updatedList.map((item) => (item.id === u.id ? data[0] : item))
+      }
+    }
+
+    if (syncedCount > 0) {
+      localStorage.setItem(LOCAL_UPDATES_KEY, JSON.stringify(updatedList))
+    }
+
+    return syncedCount
+  } catch (err) {
+    console.error('Failed to sync local updates to Supabase:', err)
+    return 0
+  }
+}
 
 /**
  * Fetch all mission updates from Supabase sorted latest first (descending by created_at)
- * Integrates local cache fallback to preserve demo/admin items if RLS is active.
+ * Integrates local cache fallback to preserve items if RLS is active.
  */
 export async function fetchUpdates(): Promise<SupabaseUpdate[]> {
   const supabase = createClient()
+
+  // Auto-sync any pending local updates to Supabase
+  if (typeof window !== 'undefined') {
+    await syncLocalUpdatesToSupabase().catch(() => {})
+  }
+
   const { data, error } = await supabase
     .from('updates')
     .select('*')
@@ -46,15 +148,22 @@ export async function fetchUpdates(): Promise<SupabaseUpdate[]> {
     }))
   }
 
-  // Check for locally added/cached posts (useful during RLS setup)
+  // Check for locally added/cached posts and filter out any deleted
   if (typeof window !== 'undefined') {
     try {
+      const deletedIds: string[] = JSON.parse(
+        localStorage.getItem(LOCAL_UPDATES_DELETED_KEY) || '[]'
+      )
+      const deletedSet = new Set(deletedIds)
+
+      // Filter remote items
+      remoteUpdates = remoteUpdates.filter((u) => !deletedSet.has(u.id))
+
       const localStr = localStorage.getItem(LOCAL_UPDATES_KEY)
       if (localStr) {
         const localList: SupabaseUpdate[] = JSON.parse(localStr)
-        // Merge without duplicating IDs
         const remoteIds = new Set(remoteUpdates.map((u) => u.id))
-        const unmergedLocals = localList.filter((l) => !remoteIds.has(l.id))
+        const unmergedLocals = localList.filter((l) => !remoteIds.has(l.id) && !deletedSet.has(l.id))
         return [...unmergedLocals, ...remoteUpdates].sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
@@ -137,12 +246,17 @@ export async function createUpdate(payload: CreateUpdatePayload): Promise<Update
 export async function deleteUpdate(id: string): Promise<UpdateMutationResponse> {
   const supabase = createClient()
 
-  // Always remove from local cache first
+  // Always remove from local cache and remember deletion
   if (typeof window !== 'undefined') {
     try {
       const prev: SupabaseUpdate[] = JSON.parse(localStorage.getItem(LOCAL_UPDATES_KEY) || '[]')
       const filtered = prev.filter((p) => p.id !== id)
       localStorage.setItem(LOCAL_UPDATES_KEY, JSON.stringify(filtered))
+
+      const prevDeleted: string[] = JSON.parse(localStorage.getItem(LOCAL_UPDATES_DELETED_KEY) || '[]')
+      if (!prevDeleted.includes(id)) {
+        localStorage.setItem(LOCAL_UPDATES_DELETED_KEY, JSON.stringify([...prevDeleted, id]))
+      }
     } catch (err) {
       console.error('Local cache delete error:', err)
     }
@@ -169,12 +283,14 @@ export async function deleteUpdate(id: string): Promise<UpdateMutationResponse> 
 }
 
 /**
- * Upload an image file to Supabase storage bucket 'media/updates/'
+ * Upload an image file to Supabase storage bucket 'media/updates/',
+ * with automatic fallback to high-quality compressed Data URL if Storage RLS restricts uploads.
  */
 export async function uploadUpdateMedia(file: File): Promise<{
   success: boolean
   publicUrl?: string
   error?: string
+  isRlsFallback?: boolean
 }> {
   const supabase = createClient()
   const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
@@ -188,18 +304,35 @@ export async function uploadUpdateMedia(file: File): Promise<{
         upsert: false,
       })
 
-    if (uploadError) {
-      console.error('Storage upload error:', uploadError)
-      return { success: false, error: uploadError.message }
+    if (!uploadError) {
+      const { data: publicData } = supabase.storage.from('media').getPublicUrl(path)
+      return {
+        success: true,
+        publicUrl: publicData.publicUrl,
+      }
     }
 
-    const { data: publicData } = supabase.storage.from('media').getPublicUrl(path)
-    return {
-      success: true,
-      publicUrl: publicData.publicUrl,
-    }
+    console.warn('Supabase storage upload restricted by RLS policy:', uploadError.message)
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Upload failed'
-    return { success: false, error: message }
+    console.warn('Storage attempt exception:', err)
+  }
+
+  // Automatic Fallback: Convert to optimized local Data URL
+  try {
+    const dataUrl = await fileToOptimizedDataUrl(file)
+    if (dataUrl) {
+      return {
+        success: true,
+        publicUrl: dataUrl,
+        isRlsFallback: true,
+      }
+    }
+  } catch (convErr) {
+    console.error('Data URL fallback conversion failed:', convErr)
+  }
+
+  return {
+    success: false,
+    error: 'Storage RLS policy active. Please paste an image URL or run the Supabase Storage SQL script.',
   }
 }

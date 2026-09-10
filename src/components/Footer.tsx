@@ -2,10 +2,18 @@
 
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { siteData } from "@/data/data";
 
 export default function Footer() {
-  const { header, hero } = siteData;
+  const { header } = siteData;
+  const pathname = usePathname() || "/";
+  const isSubpage = pathname !== "/";
+
+  const getHref = (link: string) => {
+    const anchor = link.toLowerCase().replace(/\s+/g, "-");
+    return isSubpage ? `/#${anchor}` : `#${anchor}`;
+  };
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -48,7 +56,7 @@ export default function Footer() {
                 {header.navLinks.slice(0, 4).map((link) => (
                   <li key={link}>
                     <a
-                      href={`#${link.toLowerCase().replace(/\s+/g, "-")}`}
+                      href={getHref(link)}
                       className="hover:text-white transition-colors hover:translate-x-1 inline-block"
                     >
                       {link}
@@ -66,7 +74,7 @@ export default function Footer() {
                 {header.navLinks.slice(4).map((link) => (
                   <li key={link}>
                     <a
-                      href={`#${link.toLowerCase().replace(/\s+/g, "-")}`}
+                      href={getHref(link)}
                       className="hover:text-white transition-colors hover:translate-x-1 inline-block"
                     >
                       {link}

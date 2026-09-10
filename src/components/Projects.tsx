@@ -1,16 +1,49 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { useGSAP } from "@gsap/react";
-import gsap, { ScrollTrigger } from "@/lib/gsap";
-import { siteData } from "@/data/data";
+import gsap from "@/lib/gsap";
+import { siteData, Project } from "@/data/data";
+import { fetchProjects } from "@/lib/supabase/projects";
 
 export default function Projects() {
   const { projects } = siteData;
   const sectionRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const rowsRef = useRef<HTMLDivElement>(null);
+
+  const [projectList, setProjectList] = useState<Project[]>(projects.list);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchProjects()
+      .then((remoteProjects) => {
+        if (!isMounted) return;
+        if (remoteProjects && remoteProjects.length > 0) {
+          const mapped: Project[] = remoteProjects.map((p) => ({
+            status: p.status,
+            title: p.title,
+            description: p.description || p.summary,
+            summary: p.summary,
+            imageUrl: p.cover_image_url,
+            href: p.slug ? `/projects/${p.slug}` : `#projects`,
+            stack: p.stack || [],
+          }));
+          setProjectList(mapped);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load projects from Supabase:", err);
+        setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useGSAP(
     () => {
@@ -54,7 +87,7 @@ export default function Projects() {
         }
       });
     },
-    { scope: sectionRef }
+    { scope: sectionRef, dependencies: [projectList, loading] }
   );
 
   return (
@@ -87,7 +120,7 @@ export default function Projects() {
 
         {/* Full-Width Project Rows */}
         <div ref={rowsRef} className="flex flex-col divide-y divide-white/15 border-b border-white/15">
-          {projects.list.map((project, idx) => (
+          {projectList.map((project, idx) => (
             <Link
               key={project.title}
               href={project.href}
@@ -113,6 +146,21 @@ export default function Projects() {
                   <p className="text-sm md:text-base text-neutral-400 mt-4 leading-relaxed font-light line-clamp-3">
                     {project.description}
                   </p>
+
+                  {/* Tech Stack Tags */}
+                  {project.stack && project.stack.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      {project.stack.map((tech, i) => (
+                        <span
+                          key={i}
+                          className="px-2 py-0.5 bg-white/5 border border-white/10 font-mono text-[9px] text-neutral-400 uppercase"
+                        >
+                          {tech}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="mt-6 flex items-center gap-2 font-mono text-xs text-neutral-500 group-hover:text-white transition-colors">
                     <span>EXPLORE SPECS</span>
                     <span className="group-hover:translate-x-1.5 transition-transform duration-200">

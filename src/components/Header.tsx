@@ -3,11 +3,14 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { siteData } from "@/data/data";
 
 export default function Header() {
-  const { header } = siteData;
+  const { header, projectPageUi } = siteData;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname() || "/";
+  const isSubpage = pathname !== "/";
 
   return (
     <header className="fixed top-0 left-0 w-full z-40 bg-black/80 backdrop-blur-md border-b border-white/10">
@@ -33,7 +36,8 @@ export default function Header() {
         {/* Desktop Navigation Links */}
         <nav className="hidden lg:flex items-center gap-6">
           {header.navLinks.map((link, idx) => {
-            const href = `#${link.toLowerCase().replace(/\s+/g, "-")}`;
+            const anchor = `#${link.toLowerCase().replace(/\s+/g, "-")}`;
+            const href = isSubpage ? `/${anchor}` : anchor;
             return (
               <a
                 key={link}
@@ -52,9 +56,19 @@ export default function Header() {
 
         {/* Action / Telemetry Tag */}
         <div className="hidden sm:flex items-center gap-3">
-          <div className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border border-white/20 bg-white/5 text-neutral-300">
-            [ LOC: IIST // LAT: 8.6°N ]
-          </div>
+          {isSubpage ? (
+            <Link
+              href="/#projects"
+              className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border border-[#e2f952]/60 bg-[#e2f952]/10 text-[#e2f952] hover:bg-[#e2f952] hover:text-black transition-all flex items-center gap-1.5"
+            >
+              <span>←</span>
+              <span>{projectPageUi.backToHangar}</span>
+            </Link>
+          ) : (
+            <div className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border border-white/20 bg-white/5 text-neutral-300">
+              [ LOC: IIST // LAT: 8.6°N ]
+            </div>
+          )}
         </div>
 
         {/* Mobile menu button */}
@@ -70,8 +84,19 @@ export default function Header() {
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-white/10 bg-black/95 backdrop-blur-xl px-6 py-8 flex flex-col gap-4">
+          {isSubpage && (
+            <Link
+              href="/#projects"
+              onClick={() => setMobileMenuOpen(false)}
+              className="font-mono text-sm tracking-widest uppercase text-[#e2f952] flex items-center justify-between border-b border-white/10 pb-2"
+            >
+              <span>← {projectPageUi.backToHangar}</span>
+              <span className="text-neutral-500 text-xs">[ 00 ]</span>
+            </Link>
+          )}
           {header.navLinks.map((link, idx) => {
-            const href = `#${link.toLowerCase().replace(/\s+/g, "-")}`;
+            const anchor = `#${link.toLowerCase().replace(/\s+/g, "-")}`;
+            const href = isSubpage ? `/${anchor}` : anchor;
             return (
               <a
                 key={link}

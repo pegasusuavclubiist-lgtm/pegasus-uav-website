@@ -133,3 +133,61 @@ CREATE POLICY "Allow public uploads to media"
 ON storage.objects FOR INSERT
 TO anon, authenticated
 WITH CHECK (bucket_id = 'media');
+
+-- 5. Configure Policies for team_members table (Add and Delete Core Members)
+ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read team_members" ON public.team_members;
+DROP POLICY IF EXISTS "Allow public insert team_members" ON public.team_members;
+DROP POLICY IF EXISTS "Allow public update team_members" ON public.team_members;
+DROP POLICY IF EXISTS "Allow public delete team_members" ON public.team_members;
+
+CREATE POLICY "Allow public read team_members" 
+ON public.team_members FOR SELECT 
+TO anon, authenticated 
+USING (true);
+
+CREATE POLICY "Allow public insert team_members" 
+ON public.team_members FOR INSERT 
+TO anon, authenticated 
+WITH CHECK (true);
+
+CREATE POLICY "Allow public update team_members" 
+ON public.team_members FOR UPDATE 
+TO anon, authenticated 
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Allow public delete team_members" 
+ON public.team_members FOR DELETE 
+TO anon, authenticated 
+USING (true);
+
+-- 6. Configure Policies for projects table (Add and Delete Projects)
+ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read projects" ON public.projects;
+DROP POLICY IF EXISTS "Allow public insert projects" ON public.projects;
+DROP POLICY IF EXISTS "Allow public update projects" ON public.projects;
+DROP POLICY IF EXISTS "Allow public delete projects" ON public.projects;
+
+CREATE POLICY "Allow public read projects" 
+ON public.projects FOR SELECT 
+TO anon, authenticated 
+USING (true);
+
+CREATE POLICY "Allow public insert projects" 
+ON public.projects FOR INSERT 
+TO anon, authenticated 
+WITH CHECK (true);
+
+CREATE POLICY "Allow public update projects" 
+ON public.projects FOR UPDATE 
+TO anon, authenticated 
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Allow public delete projects" 
+ON public.projects FOR DELETE 
+TO anon, authenticated 
+USING (true);
