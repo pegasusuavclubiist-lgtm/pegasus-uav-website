@@ -139,6 +139,59 @@ export interface AdminTab {
     description: string;
 }
 
+export interface ConstitutionDefinition {
+    term: string;
+    definition: string;
+}
+
+export interface ConstitutionArticleSection {
+    number?: string;
+    title: string;
+    content: string;
+}
+
+export interface ConstitutionArticle {
+    id: string;
+    articleNumber: string;
+    romanNumeral: string;
+    title: string;
+    summary: string;
+    sections: ConstitutionArticleSection[];
+}
+
+export interface ConstitutionLeadershipRole {
+    title: string;
+    category: "Executive" | "Management" | "Technical";
+    mandates: { title: string; desc: string }[];
+}
+
+export interface FoundingMember {
+    name: string;
+    col: number;
+}
+
+export interface ConstitutionData {
+    title: string;
+    acronym: string;
+    fullName: string;
+    subtitle: string;
+    institution: string;
+    campus: string;
+    edition: string;
+    pageCount: number;
+    fileSize: string;
+    pdfUrl: string;
+    downloadFileName: string;
+    motto: string;
+    slogan: string;
+    preamble: string[];
+    definitions: ConstitutionDefinition[];
+    articles: ConstitutionArticle[];
+    leadershipRoles: ConstitutionLeadershipRole[];
+    foundingMembers: FoundingMember[];
+    foundingFaculty: { name: string; title: string; department: string };
+}
+
 export const siteData = {
     header: {
         title: "PEGASUS UAV Club · IIST",
@@ -566,4 +619,298 @@ export const siteData = {
             },
         ] as InventoryItem[],
     },
+    constitution: {
+        title: "Constitution of P.E.G.A.S.U.S.",
+        acronym: "P.E.G.A.S.U.S.",
+        fullName: "Prototyping and Engineering for Geoinformatics, Aerial Systems, and Unified Solutions",
+        subtitle: "Autonomous Systems Club of IIST · Governing Document and Operational Guidelines",
+        institution: "Indian Institute of Space Science and Technology",
+        campus: "Thiruvananthapuram, Kerala",
+        edition: "Official Version 3.0 // Ratified",
+        pageCount: 33,
+        fileSize: "222 KB",
+        pdfUrl: "/constitution.pdf",
+        downloadFileName: "PEGASUS_UAV_Club_Constitution_V3.pdf",
+        motto: "Autonomy in Altitude",
+        slogan: "Innovating the Skies, Empowering the Future",
+        preamble: [
+            "We, the members of P.E.G.A.S.U.S. (Prototyping and Engineering for Geoinformatics, Aerial Systems, and Unified Solutions), in order to form a collaborative, interdisciplinary, and innovative Autonomous Systems Club at the Indian Institute of Space Science and Technology (IIST), do hereby establish this Constitution.",
+            "Recognizing the transformative potential of unmanned aerial vehicles, robotics, and smart systems in shaping the future of technology and society, we are dedicated to exploring the limitless applications of autonomous systems. We seek to advance drone technology, foster continuous research, and cultivate a culture of technical excellence within our student community.",
+            "Through our collective endeavors, we commit to bridging the gap between theoretical knowledge and practical engineering. We strive to provide a robust platform for hands-on prototyping, where members can hone their analytical skills, ignite their creativity, and push the boundaries of modern geoinformatics and aerial solutions. Furthermore, we are devoted to nurturing the next generation of engineers by emphasizing leadership, encouraging seamless teamwork, and promoting a strong sense of social responsibility and ethical engineering practices.",
+            "Firmly bound by the academic integrity, core values, and visionary ethos of IIST, we solemnly pledge unwavering adherence to the institute's rules and regulations. In pursuit of these high ideals, we lay down this document as our guiding foundation and the enduring framework for our organization."
+        ],
+        definitions: [
+            { term: "P.E.G.A.S.U.S.", definition: "The official registered acronym for Prototyping and Engineering for Geoinformatics, Aerial Systems, and Unified Solutions, operating as the premier Autonomous Systems Club of IIST." },
+            { term: "IIST", definition: "The Indian Institute of Space Science and Technology, the parent academic institution under whose overarching jurisdiction, ethical guidelines, and administrative regulations the organization legally operates." },
+            { term: "Patron", definition: "The designated faculty in charge, officially nominated by the Director of IIST, who holds the highest position of honor, academic oversight, and strategic guidance, possessing ultimate veto power and disciplinary authority." },
+            { term: "General Body", definition: "The complete assembly comprising all officially registered and active members of the club adhering to attendance and technical contribution thresholds." },
+            { term: "Active Member", definition: "An individual maintaining at least 50% attendance record at official meetings, actively participating in at least one major club event per semester, and making tangible technical or logistical contributions." },
+            { term: "Executive Committee (EC)", definition: "The primary governing and administrative body acting under the chairmanship of the President, responsible for day-to-day operations, financial allocations, and strategic functions." },
+            { term: "Club Chair", definition: "An independent, impartial advisory entity consisting of three foundational core members who do not hold active operational office within the EC, ensuring continuity of club values." },
+            { term: "Annual General Body Meeting (AGM)", definition: "The supreme deliberative assembly convened strictly once per academic year to reflect on progress, ratify roadmaps, approve audited financials, and debate constitutional amendments." },
+            { term: "Club Activity Meets", definition: "The mandatory biweekly operational assembly restricted to Executive Committee members for strategic deliberation, collaborative decision-making, and project coordination." },
+            { term: "Selection Committee", definition: "A dedicated, strictly impartial body appointed under the direct supervision of the Patron, solely responsible for evaluating applications, conducting interviews, and appointing leadership." },
+            { term: "Quorum", definition: "The minimum mandatory attendance required to conduct club business: strictly defined as at least 50% of the total appointed committee members being actively present." },
+            { term: "Internal Auditor", definition: "A designated individual responsible for rigorously verifying the monthly financial statements compiled by the Treasurer to ensure pristine financial transparency." }
+        ],
+        articles: [
+            {
+                id: "art-1",
+                articleNumber: "01",
+                romanNumeral: "Article I",
+                title: "Name of the Club",
+                summary: "Official title, foundational acronym blueprint, and mythological symbolism.",
+                sections: [
+                    { title: "Official Acronym", content: "P.E.G.A.S.U.S. stands for Prototyping and Engineering for Geoinformatics, Aerial Systems, and Unified Solutions." },
+                    { title: "Prototyping and Engineering", content: "Underscores our fundamental commitment to hands-on development, ensuring members move beyond theoretical concepts to build, test, and refine tangible, working models." },
+                    { title: "Geoinformatics and Aerial Systems", content: "Highlights our core domains of expertise: merging spatial data analysis and Earth observation with cutting-edge mechanics of unmanned aerial vehicles (UAVs)." },
+                    { title: "Unified Solutions", content: "Reflects our ultimate objective: to seamlessly integrate hardware, software, and data into holistic systems capable of addressing complex, real-world challenges." },
+                    { title: "Symbolism", content: "Draws profound inspiration from the mythical winged horse Pegasus, a timeless symbol of flight, swiftness, and unbounded imagination, pushing the boundaries of robotics and aviation." }
+                ]
+            },
+            {
+                id: "art-2",
+                articleNumber: "02",
+                romanNumeral: "Article II",
+                title: "Objectives and Purpose",
+                summary: "Six core directives driving technical innovation, student leadership, and aerospace excellence.",
+                sections: [
+                    { title: "Fostering Technical Excellence", content: "Comprehensively develop members' skills, theoretical knowledge, and technical creativity in design, fabrication, programming, and operation of drones and autonomous systems." },
+                    { title: "Bridging Theory and Practice", content: "Provide a hands-on environment where students translate classroom academics into real-world engineering solutions through rigorous prototyping, testing, and system integration." },
+                    { title: "Promoting Competitive Spirit", content: "Facilitate opportunities for members to represent IIST in national and international hackathons, design challenges, and autonomous systems competitions." },
+                    { title: "Advancing Interdisciplinary Innovation", content: "Encourage research and development at the intersection of aerial platforms, artificial intelligence, and geoinformatics." },
+                    { title: "Cultivating Leadership and Collaboration", content: "Build an inclusive culture of teamwork, peer-to-peer mentorship, and open knowledge sharing." },
+                    { title: "Empowering Career Readiness", content: "Prepare members for impactful careers in aerospace, robotics, and geoinformatics industries with exposure to modern engineering tools and industry trends." }
+                ]
+            },
+            {
+                id: "art-3",
+                articleNumber: "03",
+                romanNumeral: "Article III",
+                title: "Fundamental Rights",
+                summary: "Foundational rights guaranteed to every registered member to ensure fairness, safety, and meritocracy.",
+                sections: [
+                    { number: "Section 1", title: "Equal Opportunity and Fair Access", content: "Equitable access to participate in club activities, utilize club resources, and seek leadership roles without discrimination." },
+                    { number: "Section 2", title: "Freedom of Expression and Constructive Discourse", content: "Right to freely express technical ideas, project proposals, and organizational opinions in a respectful, professional manner." },
+                    { number: "Section 3", title: "Right to Education, Skill Development, and Safety", content: "Access to technical training, workshops, and project mentorship in a strictly enforced safe operating environment." },
+                    { number: "Section 4", title: "Intellectual Property and Fair Attribution", content: "Rigorous respect and formal credit for individual and collaborative contributions to club projects, papers, and competition entries." },
+                    { number: "Section 5", title: "Privacy, Data Protection, and Confidentiality", content: "Guaranteed personal privacy alongside mutual confidentiality for proprietary club projects and strategic competition data." }
+                ]
+            },
+            {
+                id: "art-4",
+                articleNumber: "04",
+                romanNumeral: "Article IV",
+                title: "Emblem, Slogan and Motto",
+                summary: "Official heraldry, authorized usage parameters, slogan, and guiding motto.",
+                sections: [
+                    { number: "Section 1", title: "Official Emblem", content: "Standardized circular heraldry featuring the club name, autonomous systems and geoinformatics iconography, and affiliation with IIST." },
+                    { number: "Section 2", title: "Authorized Use", content: "Exclusive property of the club; unauthorized commercial use, reproduction, or modification is strictly prohibited without written EC approval." },
+                    { number: "Section 3", title: "Official Slogan", content: "”Innovating the Skies, Empowering the Future” — encapsulated across promotional campaigns, outreach, and public media." },
+                    { number: "Section 4", title: "Official Motto", content: "”Autonomy in Altitude” — representing our core philosophical, academic, and engineering driving force." }
+                ]
+            },
+            {
+                id: "art-5",
+                articleNumber: "05",
+                romanNumeral: "Article V",
+                title: "Annual General Body Meeting",
+                summary: "Supreme deliberative assembly protocols, notice periods, reporting, and democratic decision-making.",
+                sections: [
+                    { number: "Section 1", title: "Purpose & Supremacy", content: "Supreme deliberative assembly for reflecting upon progress, ratifying roadmaps, and ensuring leadership accountability." },
+                    { number: "Section 2", title: "Timing and Frequency", content: "Convened strictly once every academic year with formal notice issued at least fourteen days in advance." },
+                    { number: "Section 3", title: "Agenda & Scope", content: "Comprehensive review of annual activities, audited financial statements, executive leadership transitions, and strategic blueprints." },
+                    { number: "Section 4", title: "Chairmanship", content: "Officially chaired by the Patron (Designated Faculty in Charge nominated by Director, IIST) who enforces parliamentary order." },
+                    { number: "Section 5", title: "Reporting & Audits", content: "Outgoing and active Executive Committee members present detailed reports, project milestones, and audited statements." },
+                    { number: "Section 6-8", title: "Decision Making, Minutes & Adjournment", content: "Formal votes require consensus or democratic majority; official minutes recorded by Secretary General and archived." }
+                ]
+            },
+            {
+                id: "art-6",
+                articleNumber: "06",
+                romanNumeral: "Article VI",
+                title: "Executive Committee & Activity Meets",
+                summary: "EC governance structure, branch representation, advisory chair, and biweekly meeting protocols.",
+                sections: [
+                    { number: "Section 1", title: "Structure & Governance", content: "Composed of President, Vice President, Secretary General, Joint Secretary, Treasurer, and Corporate & Alumni Lead, plus academic branch representatives." },
+                    { number: "Section 1(a)", title: "The Club Chair", content: "Three foundational core members serving in an impartial advisory capacity to ensure continuity of club traditions and long-term vision." },
+                    { number: "Section 1(b)", title: "Removal of Executive Members", content: "Due process via General Body review followed by final binding decision by the Patron for extenuating reasons or severe misconduct." },
+                    { number: "Section 2", title: "Biweekly Club Activity Meets", content: "Primary operational forum for strategic deliberation, decision-making, and project synchronization." },
+                    { number: "Section 3-5", title: "Quorum (50%), Agendas & Minutes", content: "Requires at least 50% quorum for binding decisions; agenda circulated 2 days in advance; minutes documented and archived." }
+                ]
+            },
+            {
+                id: "art-7",
+                articleNumber: "07",
+                romanNumeral: "Article VII",
+                title: "Amendment Rules",
+                summary: "Procedures for proposing, debating, ratifying, and institutionalizing constitutional amendments.",
+                sections: [
+                    { number: "Section 1", title: "Proposal of Amendments", content: "Any registered member may propose amendments in writing with explicit rationale submitted to the Secretary General in advance of GBM." },
+                    { number: "Section 2", title: "Voting Protocol", content: "Must be debated and ratified by at least a fifty percent democratic majority of present registered members during an official GBM." },
+                    { number: "Section 3", title: "Patron Approval", content: "General Body passage acts as formal recommendation; final binding enactment requires explicit formal approval of the Patron." },
+                    { number: "Section 4", title: "Enactment & Documentation", content: "Immediately takes effect upon Patron approval; integrated into master copy by Secretary General and circulated." }
+                ]
+            },
+            {
+                id: "art-8",
+                articleNumber: "08",
+                romanNumeral: "Article VIII",
+                title: "Selection Rules and Procedures",
+                summary: "Tenure limits, selection committee oversight, candidate eligibility, and merit-based appointment.",
+                sections: [
+                    { number: "Section 1", title: "Term of Office", content: "Official term continuously spans two academic semesters (one full academic year) before mandatory leadership transitions." },
+                    { number: "Section 2", title: "Selection Committee", content: "Impartial body appointed under Patron supervision and supported by outgoing non-applying executives to conduct fair evaluations." },
+                    { number: "Section 3", title: "Eligibility Criteria", content: "Enrolled 2nd year B.Tech. or higher, M.Tech., and Ph.D. students with consistent academic standing and proven club contribution." },
+                    { number: "Section 4", title: "Evaluation Process", content: "Comprehensive multi-stage review of written applications, past technical contributions, and structured panel interviews." },
+                    { number: "Section 5", title: "Conflict Resolution", content: "Irregularities or compromised integrity result in immediate nullification and renewed evaluations directed by Patron." }
+                ]
+            },
+            {
+                id: "art-9",
+                articleNumber: "09",
+                romanNumeral: "Article IX",
+                title: "Finance Rules",
+                summary: "Strict financial integrity, dual-signatory approvals, emergency liquidity limits, and monthly audits.",
+                sections: [
+                    { number: "Section 1", title: "Utilization of Funds", content: "Strictly and exclusively for established technical and academic objectives; zero diversion for personal use or private benefit." },
+                    { number: "Section 1.2", title: "Dual Approval Mandate", content: "Expenditures mandate prior written approval of both the Treasurer and President, ratified during club meets." },
+                    { number: "Section 2", title: "Financial Oversight", content: "President empowered to conduct unscheduled reviews; Patron retains unconditional inspection rights over ledgers and inventories." },
+                    { number: "Section 3", title: "Emergency Contingencies (INR 5000)", content: "Secretary General authorized to approve emergency liquidity up to exactly INR 5000 for critical unforeseen field failures, subject to post-audit." },
+                    { number: "Section 4", title: "Monthly Audits & Signatures", content: "Mandatory monthly internal audits signed by Treasurer, Secretary General, and Internal Auditor before Presidential sign-off." }
+                ]
+            },
+            {
+                id: "art-10",
+                articleNumber: "10",
+                romanNumeral: "Article X",
+                title: "General Rules & Accountability",
+                summary: "Mandatory 50% attendance, late inventory penalties, drone safety standards, and 20% prize pool remittance.",
+                sections: [
+                    { number: "Section 1", title: "Membership Criteria & Nullification", content: "Open to all interested students without membership fees; mandates 50% meeting attendance and 1 major event per semester." },
+                    { number: "Section 2", title: "Inventory Access & Late Penalty (INR 50/day)", content: "Hardware borrowing requires Joint Secretary permission; late penalty fee of INR 50/item/day; full liability for damage or loss." },
+                    { number: "Section 3", title: "Personal Project Liability", content: "Unauthorized use for personal non-club projects incurring damage demands 100% component cost reimbursement." },
+                    { number: "Section 4", title: "Drone Integrity & Dismantling", content: "Disassembly or cannibalization of completed drones strictly requires written permission from Secretary General and original build team." },
+                    { number: "Section 5", title: "Facility Security", content: "Lab keys restricted exclusively to formally elected Executive Committee members from campus security." },
+                    { number: "Section 6", title: "Active Status & Stagnation Dissolution", content: "One calendar month of zero activity or unorganized progress triggers immediate suspension and potential team dissolution by Patron." },
+                    { number: "Section 7", title: "Social Media & Public Relations", content: "Official digital handles confined strictly to professional outreach; administered exclusively by PR Head and President." },
+                    { number: "Section 8", title: "Competition Asset & Prize Remittance (20%)", content: "Teams representing the club remit 20% of prize winnings to central treasury; competition hardware becomes permanent club property." },
+                    { number: "Section 9-10", title: "Institutional Compliance", content: "Master constitution perpetually accessible; full compliance with IIST, DOS, Student Activities Dean, and Avionics Department." }
+                ]
+            },
+            {
+                id: "art-11",
+                articleNumber: "11",
+                romanNumeral: "Article XI",
+                title: "Roles of Executive, Technical & Managerial Posts",
+                summary: "Granular constitutional responsibilities across Executive, Management, and Technical leads.",
+                sections: [
+                    { title: "Executive Tier", content: "President (Supreme Authority & Strategy), Vice President (Operations & Deputy Command), Secretary General (Chief Administrator & Roster), Treasurer (Budget & Fiscal Oversight), Director of Corporate & Alumni Relations (Industry & Alumni), Joint Secretary (Logistics & Inventory)." },
+                    { title: "Management Tier", content: "Project Manager (Technical Lifecycle & Milestones), Public Relations & Media Head (Digital Footprint & Branding), Logistics Head (Physical Hardware & Venue Clearences), Events Head & Co-Head (Symposiums, Workshops & Hackathons), Junior Treasurer (Ledgers & Cost Estimation)." },
+                    { title: "Technical Tier (Postgraduate Only)", content: "Aerodynamics and Airframes Lead (CAD, FEA, CFD & Composites), Avionics and Embedded Systems Lead (Wiring, RTK, RF Links, Power Systems & Safety), Software and Autonomy Lead (ROS, VIO, Object Detection, SITL/HITL & Autopilot)." }
+                ]
+            }
+        ],
+        leadershipRoles: [
+            {
+                category: "Executive",
+                title: "President",
+                mandates: [
+                    { title: "Supreme Executive Authority", desc: "Highest ranking student official exercising overarching executive control over all operations, technical projects, and administrative decisions." },
+                    { title: "Strategic Command", desc: "Single-handedly provides the defining vision, long-term roadmap, and ensures complete synergy with IIST and ISRO values." },
+                    { title: "Financial Authority & Veto", desc: "Unilaterally dictates budget priorities with the Treasurer and reserves exclusive executive veto power over lower committee decisions." },
+                    { title: "Conflict Arbitration", desc: "Supreme arbitrator for internal disputes and constitutional ambiguity; all members unconditionally abide by final decisions." }
+                ]
+            },
+            {
+                category: "Executive",
+                title: "Vice President",
+                mandates: [
+                    { title: "Second in Command", desc: "Immediate subordinate and strategic advisor to the President, wielding executive authority over internal management." },
+                    { title: "Presidential Succession", desc: "Unconditionally assumes presidential powers and duties in the event of absence or temporary incapacitation." },
+                    { title: "Operational Oversight", desc: "Monitors performance of technical and managerial leads, holding authority to initiate internal reviews for underperforming sectors." }
+                ]
+            },
+            {
+                category: "Executive",
+                title: "Secretary General",
+                mandates: [
+                    { title: "Chief Administrative Officer", desc: "Supreme administrative authority holding exclusive control over all internal communications, records, and archives." },
+                    { title: "Logistical Command & Rosters", desc: "Dictates project schedules, enforces operational deadlines, and maintains centralized registries and attendance thresholds." },
+                    { title: "Meeting Convener", desc: "Constructs binding agendas and issues mandatory prior notifications for General Body and Executive Committee meets." }
+                ]
+            },
+            {
+                category: "Executive",
+                title: "Treasurer",
+                mandates: [
+                    { title: "Budgeting & Financial Tracking", desc: "Develops, manages, and oversees the comprehensive annual operating budget and capital investments across all technical builds." },
+                    { title: "Fundraising & Grants", desc: "Spearheads external sponsorship acquisition, financial grants, and fiscal allocation for flagship competitions." },
+                    { title: "Ledger Auditing", desc: "Maintains transparent financial ledgers, vendor payments, and monthly audits co-signed by Internal Auditor." }
+                ]
+            },
+            {
+                category: "Management",
+                title: "Project Manager",
+                mandates: [
+                    { title: "Technical Lifecycle Planning", desc: "Spearheads comprehensive planning, structural milestones, and lifecycle execution for all research initiatives." },
+                    { title: "Team Delegation & Mentorship", desc: "Constructs specialized project teams, mitigates bottlenecks, and enforces interdisciplinary collaboration." },
+                    { title: "Documentation & Archiving", desc: "Mandates and preserves comprehensive technical CAD files, codebases, flight logs, and debriefing sessions." }
+                ]
+            },
+            {
+                category: "Management",
+                title: "Public Relations & Media Head",
+                mandates: [
+                    { title: "Digital Brand Strategy", desc: "Architects the public media presence across Instagram, GitHub, YouTube, and LinkedIn in strict alignment with IIST guidelines." },
+                    { title: "Outreach & Event Promotion", desc: "Spearheads digital campaigns for workshops, hackathons, and recruitment drives to maximize national reach." }
+                ]
+            },
+            {
+                category: "Technical",
+                title: "Aerodynamics & Airframes Lead (PG)",
+                mandates: [
+                    { title: "Structural Integrity & CAD/CFD", desc: "Supreme technical authority on airframe CAD, FEA stress modeling, CFD drag mitigation, and carbon fiber composite layup." },
+                    { title: "Quality Assurance & Flight Inspections", desc: "Validates all physical builds against aviation safety standards prior to field flight authorization." }
+                ]
+            },
+            {
+                category: "Technical",
+                title: "Avionics & Embedded Systems Lead (PG)",
+                mandates: [
+                    { title: "Electronics Architecture & Wiring", desc: "Oversees flight controllers, companion computers, secure RF telemetry links, and multi-sensor RTK/LiDAR fusion." },
+                    { title: "Power Distribution & Safety", desc: "Architects fail-safe battery management, redundant BEC isolation, and ground debugging protocols." }
+                ]
+            },
+            {
+                category: "Technical",
+                title: "Software & Autonomy Lead (PG)",
+                mandates: [
+                    { title: "Software Stack & Autopilot", desc: "Directs onboard autonomy, flight control loops, and mission planner integration." },
+                    { title: "ROS, VIO & Computer Vision", desc: "Deploys real-time Visual-Inertial Odometry, object detection, and path planning in GPS-denied environments." }
+                ]
+            }
+        ],
+        foundingMembers: [
+            { name: "Ishaan Gupta", col: 1 },
+            { name: "Tushita Aggarwal", col: 2 },
+            { name: "T. Nishkalan", col: 1 },
+            { name: "Naman Gandhi", col: 2 },
+            { name: "Aditya N. Mohanty", col: 1 },
+            { name: "Pranjal Pise", col: 2 },
+            { name: "Ashmit Show", col: 1 },
+            { name: "Pranav D.", col: 2 },
+            { name: "Adithyan T.", col: 1 },
+            { name: "B.L. Vedanaathan", col: 2 },
+            { name: "Ishaan Shankar", col: 1 },
+            { name: "Niyati Kaushal", col: 2 },
+            { name: "Parth Ray", col: 1 },
+            { name: "Anand Nair", col: 2 }
+        ],
+        foundingFaculty: {
+            name: "Dr. Rajesh Joseph Abraham",
+            title: "Founding Faculty in Charge",
+            department: "Department of Avionics · IIST"
+        }
+    } as ConstitutionData,
 };

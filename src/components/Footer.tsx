@@ -93,8 +93,14 @@ export default function Footer() {
                 <div>AVIONICS: NOMINAL</div>
                 <div>AUTONOMY: READY</div>
                 <Link
-                  href="/admin"
+                  href="/constitution"
                   className="mt-2 text-left text-neutral-400 underline hover:text-[#e2f952] transition-colors"
+                >
+                  [ CONSTITUTION & CHARTER → ]
+                </Link>
+                <Link
+                  href="/admin"
+                  className="mt-1 text-left text-neutral-400 underline hover:text-[#e2f952] transition-colors"
                 >
                   [ CADRE ADMIN CONSOLE → ]
                 </Link>

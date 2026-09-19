@@ -92,9 +92,9 @@ export default function Hero() {
       <div className="relative z-10 max-w-[1800px] mx-auto w-full px-6 md:px-12 flex flex-col gap-3 pointer-events-none">
         <div
           ref={eyebrowRef}
-          className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.25em] text-[#e2f952]"
+          className="flex items-center gap-3 font-mono text-sm sm:text-base md:text-lg font-semibold uppercase tracking-[0.2em] text-[#e2f952]"
         >
-          <span className="w-1.5 h-1.5 bg-[#e2f952] rounded-full animate-pulse" />
+          <span className="w-2 h-2 bg-[#e2f952] rounded-full animate-pulse flex-shrink-0" />
           <span>{hero.eyebrow}</span>
         </div>
       </div>
@@ -104,7 +104,7 @@ export default function Hero() {
         <div className="max-w-4xl">
           <h1
             ref={headlineRef}
-            className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-extrabold uppercase tracking-tighter leading-[0.88] select-none"
+            className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold uppercase tracking-tighter leading-[0.92] select-none"
           >
             {headlineWords.map((word, index) => (
               <span

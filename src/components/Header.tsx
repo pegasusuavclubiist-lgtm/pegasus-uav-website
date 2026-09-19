@@ -58,15 +58,23 @@ export default function Header() {
         <div className="hidden sm:flex items-center gap-3">
           {isSubpage ? (
             <Link
-              href="/#projects"
+              href="/"
               className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border border-[#e2f952]/60 bg-[#e2f952]/10 text-[#e2f952] hover:bg-[#e2f952] hover:text-black transition-all flex items-center gap-1.5"
             >
               <span>←</span>
-              <span>{projectPageUi.backToHangar}</span>
+              <span>{pathname.includes("constitution") ? "RETURN TO FLIGHT OPS" : projectPageUi.backToHangar}</span>
             </Link>
           ) : (
-            <div className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border border-white/20 bg-white/5 text-neutral-300">
-              [ LOC: IIST // LAT: 8.6°N ]
+            <div className="flex items-center gap-2.5">
+              <Link
+                href="/constitution"
+                className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border border-white/20 hover:border-[#e2f952] bg-white/5 hover:text-[#e2f952] text-neutral-300 transition-all flex items-center gap-1"
+              >
+                <span>[ CHARTER ↗ ]</span>
+              </Link>
+              <div className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border border-white/20 bg-white/5 text-neutral-300">
+                [ LOC: IIST // LAT: 8.6°N ]
+              </div>
             </div>
           )}
         </div>
@@ -86,14 +94,22 @@ export default function Header() {
         <div className="lg:hidden border-t border-white/10 bg-black/95 backdrop-blur-xl px-6 py-8 flex flex-col gap-4">
           {isSubpage && (
             <Link
-              href="/#projects"
+              href="/"
               onClick={() => setMobileMenuOpen(false)}
               className="font-mono text-sm tracking-widest uppercase text-[#e2f952] flex items-center justify-between border-b border-white/10 pb-2"
             >
-              <span>← {projectPageUi.backToHangar}</span>
+              <span>← {pathname.includes("constitution") ? "RETURN TO FLIGHT OPS" : projectPageUi.backToHangar}</span>
               <span className="text-neutral-500 text-xs">[ 00 ]</span>
             </Link>
           )}
+          <Link
+            href="/constitution"
+            onClick={() => setMobileMenuOpen(false)}
+            className="font-mono text-sm tracking-widest uppercase text-[#e2f952] flex items-center justify-between border-b border-white/10 pb-2"
+          >
+            <span>CONSTITUTION & CHARTER</span>
+            <span className="text-[#e2f952] text-xs">[ DOC ]</span>
+          </Link>
           {header.navLinks.map((link, idx) => {
             const anchor = `#${link.toLowerCase().replace(/\s+/g, "-")}`;
             const href = isSubpage ? `/${anchor}` : anchor;
