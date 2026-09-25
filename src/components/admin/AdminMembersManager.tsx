@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   fetchTeamMembers,
   addTeamMember,
+  updateTeamMember,
   deleteTeamMember,
   uploadMemberPhoto,
   SupabaseTeamMember,
@@ -35,6 +36,18 @@ export default function AdminMembersManager() {
   // Deletion modal state
   const [deleteTarget, setDeleteTarget] = useState<SupabaseTeamMember | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Edit modal state
+  const [editingMember, setEditingMember] = useState<SupabaseTeamMember | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDesignation, setEditDesignation] = useState("");
+  const [editParagraph, setEditParagraph] = useState("");
+  const [editPhotoUrl, setEditPhotoUrl] = useState("");
+  const [editDepartment, setEditDepartment] = useState("understudy");
+  const [editLinkedin, setEditLinkedin] = useState("");
+  const [editDisplayOrder, setEditDisplayOrder] = useState<number>(10);
+  const [uploadingEditPhoto, setUploadingEditPhoto] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // RLS SQL Helper state
   const [showSqlHelper, setShowSqlHelper] = useState(false);
@@ -189,6 +202,138 @@ export default function AdminMembersManager() {
     }
   };
 
+  // Open Edit Modal with preloaded operative details
+  const openEditModal = (member: SupabaseTeamMember) => {
+    setEditingMember(member);
+    setEditName(member.name || "");
+    setEditDesignation(member.role || "");
+    setEditParagraph(member.subsystem || "");
+    setEditPhotoUrl(member.photo_url || "");
+    setEditDepartment((member.department || "understudy").toLowerCase());
+    setEditLinkedin(member.linkedin_url || "");
+    setEditDisplayOrder(member.display_order ?? 10);
+  };
+
+  const closeEditModal = () => {
+    if (savingEdit) return;
+    setEditingMember(null);
+    setUploadingEditPhoto(false);
+  };
+
+  // Upload photo specifically in edit modal
+  const handleEditPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingEditPhoto(true);
+    setStatusMessage({
+      type: "info",
+      text: "TRANSMITTING UPDATED OPERATIVE PHOTO TO MEDIA STORAGE...",
+    });
+
+    const res = await uploadMemberPhoto(file);
+    setUploadingEditPhoto(false);
+
+    if (res.success && res.publicUrl) {
+      setEditPhotoUrl(res.publicUrl);
+      if (res.isRlsFallback) {
+        setStatusMessage({
+          type: "info",
+          text: "PHOTO ATTACHED DIRECTLY (Storage RLS active: image encoded for instant save)",
+        });
+        setShowSqlHelper(true);
+      } else {
+        setStatusMessage({
+          type: "success",
+          text: "UPDATED PHOTO HOSTED & ATTACHED SUCCESSFULLY",
+        });
+      }
+      setTimeout(() => setStatusMessage(null), 4000);
+    } else {
+      setStatusMessage({
+        type: "error",
+        text: `STORAGE NOTICE: ${res.error || "Upload policy active. You can paste a public photo URL directly."}`,
+      });
+    }
+  };
+
+  // Save changes to operative record
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+
+    if (!editName.trim()) {
+      setStatusMessage({ type: "error", text: "OPERATIVE NAME IS REQUIRED" });
+      return;
+    }
+    if (!editDesignation.trim()) {
+      setStatusMessage({ type: "error", text: "DESIGNATION / ROLE IS REQUIRED" });
+      return;
+    }
+    if (!editParagraph.trim()) {
+      setStatusMessage({ type: "error", text: "SMALL PARAGRAPH / BIO IS REQUIRED" });
+      return;
+    }
+    if (!editPhotoUrl.trim()) {
+      setStatusMessage({ type: "error", text: "OPERATIVE PHOTO IS REQUIRED (UPLOAD OR URL)" });
+      return;
+    }
+
+    setSavingEdit(true);
+    setStatusMessage({
+      type: "info",
+      text: `TRANSMITTING UPDATES FOR [ ${editName.trim().toUpperCase()} ] TO CADRE...`,
+    });
+
+    const payload = {
+      name: editName.trim(),
+      role: editDesignation.trim(),
+      subsystem: editParagraph.trim(),
+      photo_url: editPhotoUrl.trim(),
+      department: editDepartment.trim() || "understudy",
+      linkedin_url: editLinkedin.trim() || null,
+      display_order: Number(editDisplayOrder) || 10,
+    };
+
+    // Optimistically update local list state
+    setMembers((prev) =>
+      prev.map((m) =>
+        m.id === editingMember.id
+          ? {
+              ...m,
+              ...payload,
+            }
+          : m
+      )
+    );
+
+    const res = await updateTeamMember(editingMember.id, payload);
+    setSavingEdit(false);
+
+    if (res.success) {
+      setStatusMessage({
+        type: "success",
+        text: res.isRlsError
+          ? `OPERATIVE RECORD [ ${payload.name.toUpperCase()} ] UPDATED LOCALLY (RLS ACTIVE IN SUPABASE)`
+          : `OPERATIVE RECORD [ ${payload.name.toUpperCase()} ] COMMITTED TO CADRE DATABASE SUCCESSFULLY`,
+      });
+
+      if (res.isRlsError) {
+        setShowSqlHelper(true);
+      }
+
+      setEditingMember(null);
+      loadMembers();
+      setTimeout(() => setStatusMessage(null), 4000);
+    } else {
+      setStatusMessage({
+        type: "error",
+        text: `UPDATE FAILED: ${res.error || "Unable to update operative record"}`,
+      });
+      loadMembers();
+    }
+  };
+
   // Filter members
   const filteredMembers = useMemo(() => {
     return members.filter((m) => {
@@ -263,8 +408,10 @@ CREATE POLICY "Allow public uploads to media" ON storage.objects FOR INSERT TO a
 -- 2. Allow Database writes to team_members table:
 ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public insert team_members" ON public.team_members;
+DROP POLICY IF EXISTS "Allow public update team_members" ON public.team_members;
 DROP POLICY IF EXISTS "Allow public delete team_members" ON public.team_members;
 CREATE POLICY "Allow public insert team_members" ON public.team_members FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Allow public update team_members" ON public.team_members FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public delete team_members" ON public.team_members FOR DELETE TO anon, authenticated USING (true);`}
           </pre>
         </div>
@@ -636,22 +783,47 @@ CREATE POLICY "Allow public delete team_members" ON public.team_members FOR DELE
                       [ No brief paragraph recorded in subsystem column ]
                     </div>
                   )}
+
+                  {/* Optional LinkedIn URL */}
+                  {member.linkedin_url && (
+                    <div className="mt-3 pt-2 border-t border-white/5 flex items-center gap-1.5 font-mono text-[10px] text-neutral-400">
+                      <span className="text-[#e2f952]">LINKEDIN:</span>
+                      <a
+                        href={member.linkedin_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-neutral-300 hover:text-white underline truncate max-w-[200px]"
+                      >
+                        {member.linkedin_url.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '')}
+                      </a>
+                    </div>
+                  )}
                 </div>
 
-                {/* Card Footer: Remove Action */}
-                <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between">
+                {/* Card Footer: Edit & Remove Actions */}
+                <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 font-mono text-[9px] text-neutral-500 uppercase tracking-widest">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#e2f952]" />
                     <span>STATUS: ACTIVE</span>
                   </div>
 
-                  <button
-                    onClick={() => setDeleteTarget(member)}
-                    disabled={isDeleting}
-                    className="font-mono text-[10px] uppercase tracking-wider text-red-400 hover:text-red-300 hover:bg-red-950/40 px-2 py-1 border border-red-500/30 hover:border-red-500 transition-colors"
-                  >
-                    {isDeleting ? "[ EXPUNGING... ]" : "[ REMOVE MEMBER ]"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openEditModal(member)}
+                      className="font-mono text-[10px] uppercase tracking-wider text-[#e2f952] hover:text-black hover:bg-[#e2f952] px-2.5 py-1 border border-[#e2f952]/40 hover:border-[#e2f952] transition-all font-bold flex items-center gap-1"
+                      title="Edit operative details"
+                    >
+                      <span>✎ EDIT DETAILS</span>
+                    </button>
+
+                    <button
+                      onClick={() => setDeleteTarget(member)}
+                      disabled={isDeleting}
+                      className="font-mono text-[10px] uppercase tracking-wider text-red-400 hover:text-red-300 hover:bg-red-950/40 px-2 py-1 border border-red-500/30 hover:border-red-500 transition-colors"
+                    >
+                      {isDeleting ? "[ EXPUNGING... ]" : "[ REMOVE ]"}
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -705,6 +877,241 @@ CREATE POLICY "Allow public delete team_members" ON public.team_members FOR DELE
                 {deletingId === deleteTarget.id ? "[ EXPUNGING... ]" : "[ CONFIRM EXPUNGE ]"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Operative Modal */}
+      {editingMember && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 sm:p-6 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeEditModal();
+          }}
+        >
+          <div className="bg-neutral-950 border-2 border-[#e2f952] max-w-3xl w-full p-6 sm:p-8 my-auto relative shadow-[0_0_50px_rgba(226,249,82,0.2)] animate-in fade-in duration-200">
+            {/* Corner Reticle Accents */}
+            <span className="absolute top-2 left-2 w-2 h-2 border-t-2 border-l-2 border-[#e2f952] pointer-events-none" />
+            <span className="absolute top-2 right-2 w-2 h-2 border-t-2 border-r-2 border-[#e2f952] pointer-events-none" />
+            <span className="absolute bottom-2 left-2 w-2 h-2 border-b-2 border-l-2 border-[#e2f952] pointer-events-none" />
+            <span className="absolute bottom-2 right-2 w-2 h-2 border-b-2 border-r-2 border-[#e2f952] pointer-events-none" />
+
+            <div className="flex items-start justify-between pb-4 mb-6 border-b border-white/10">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#e2f952] animate-pulse" />
+                  <h3 className="font-mono text-sm sm:text-base uppercase tracking-widest text-[#e2f952] font-black">
+                    [ EDIT OPERATIVE CADRE RECORD // {editingMember.name.toUpperCase()} ]
+                  </h3>
+                </div>
+                <p className="font-mono text-[10px] text-neutral-400 uppercase tracking-widest">
+                  DATABASE ID: <span className="text-white">{editingMember.id}</span> · TABLE: team_members
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEditModal}
+                disabled={savingEdit}
+                className="text-neutral-400 hover:text-white font-mono text-sm uppercase px-2 py-1 border border-white/10 hover:border-white/40 transition-colors"
+                title="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Operative Name */}
+                <div>
+                  <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider mb-2">
+                    Operative Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="e.g. Vikramaditya Rao"
+                    className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-sm px-4 py-3 outline-none transition-colors uppercase"
+                    required
+                  />
+                </div>
+
+                {/* Designation */}
+                <div>
+                  <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider mb-2">
+                    Designation / Subsystem Role *
+                  </label>
+                  <input
+                    type="text"
+                    value={editDesignation}
+                    onChange={(e) => setEditDesignation(e.target.value)}
+                    placeholder="e.g. Flight Control Lead / Autonomy Specialist"
+                    className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-sm px-4 py-3 outline-none transition-colors"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Department Category & Display Order */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider mb-2">
+                    Cadre Department Category *
+                  </label>
+                  <select
+                    value={editDepartment}
+                    onChange={(e) => setEditDepartment(e.target.value)}
+                    className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-4 py-3 outline-none transition-colors uppercase"
+                  >
+                    <option value="understudy">Core Members (Category 04 — Understudy)</option>
+                    <option value="technical">Technical Core (Category 02)</option>
+                    <option value="executive">Executive Board (Category 01)</option>
+                    <option value="management">Management Core (Category 03)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider mb-2">
+                    Display Order Index
+                  </label>
+                  <input
+                    type="number"
+                    value={editDisplayOrder}
+                    onChange={(e) => setEditDisplayOrder(parseInt(e.target.value) || 0)}
+                    min={1}
+                    max={999}
+                    className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-4 py-3 outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Small Paragraph / Bio (stored in subsystem column) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider">
+                    Small Paragraph / Operative Bio *
+                  </label>
+                  <span className="font-mono text-[10px] text-[#e2f952]">
+                    DATABASE FIELD: subsystem
+                  </span>
+                </div>
+                <textarea
+                  value={editParagraph}
+                  onChange={(e) => setEditParagraph(e.target.value)}
+                  rows={4}
+                  placeholder="Detail the operative's responsibilities, subsystem focus, or technical contributions..."
+                  className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-4 py-3 outline-none transition-colors leading-relaxed resize-y"
+                  required
+                />
+              </div>
+
+              {/* Photo Input (Upload or Direct URL) with Preview */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                <div className="md:col-span-8 space-y-4">
+                  <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider">
+                    Operative Photo *
+                  </label>
+
+                  {/* File Upload Box */}
+                  <div className="relative border border-dashed border-white/20 p-5 hover:border-[#e2f952] transition-colors text-center cursor-pointer bg-neutral-900/60">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditPhotoUpload}
+                      disabled={uploadingEditPhoto}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="font-mono text-xs text-neutral-400 flex flex-col items-center gap-1.5">
+                      <span className="text-[#e2f952] font-bold">
+                        {uploadingEditPhoto ? "UPLOADING PHOTO TO STORAGE..." : "📁 CLICK OR DROP NEW IMAGE TO REPLACE"}
+                      </span>
+                      <span className="text-[10px] text-neutral-500">
+                        Uploads directly to Supabase storage bucket `media/team/`
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Direct Image URL input */}
+                  <div>
+                    <label className="block font-mono text-[10px] text-neutral-500 uppercase tracking-wider mb-1">
+                      Or edit direct image URL:
+                    </label>
+                    <input
+                      type="url"
+                      value={editPhotoUrl}
+                      onChange={(e) => setEditPhotoUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full bg-neutral-900 border border-white/15 focus:border-[#e2f952] text-white font-mono text-xs px-3 py-2 outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Photo Preview Tile */}
+                <div className="md:col-span-4 bg-neutral-900 border border-white/15 p-4 flex flex-col items-center justify-center min-h-[160px]">
+                  <span className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest mb-3">
+                    PHOTO PREVIEW
+                  </span>
+                  {editPhotoUrl ? (
+                    <div className="relative w-28 h-28 border border-[#e2f952] overflow-hidden bg-black">
+                      <Image
+                        src={editPhotoUrl}
+                        alt="Operative Preview"
+                        fill
+                        unoptimized={editPhotoUrl.startsWith("data:")}
+                        className="object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditPhotoUrl("")}
+                        className="absolute top-1 right-1 bg-red-600 text-white text-[9px] font-mono px-1 py-0.5"
+                        title="Remove photo"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-28 h-28 border border-white/10 flex flex-col items-center justify-center text-neutral-600 font-mono text-[10px] text-center p-2">
+                      <span>[ NO PHOTO ]</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* LinkedIn URL */}
+              <div>
+                <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider mb-2">
+                  LinkedIn Profile URL (Optional)
+                </label>
+                <input
+                  type="url"
+                  value={editLinkedin}
+                  onChange={(e) => setEditLinkedin(e.target.value)}
+                  placeholder="https://linkedin.com/in/operative-profile"
+                  className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-4 py-3 outline-none transition-colors"
+                />
+              </div>
+
+              {/* Form Action Buttons */}
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-white/10 font-mono text-xs">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  disabled={savingEdit}
+                  className="px-6 py-2.5 uppercase tracking-wider text-neutral-400 hover:text-white border border-white/15 transition-colors disabled:opacity-50"
+                >
+                  [ CANCEL ]
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={savingEdit || uploadingEditPhoto}
+                  className="px-8 py-3 bg-[#e2f952] text-black uppercase tracking-wider font-bold border border-[#e2f952] hover:bg-white hover:border-white transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(226,249,82,0.3)]"
+                >
+                  {savingEdit ? "[ COMMITTING CHANGES... ]" : "[ SAVE CHANGES // COMMIT TO CADRE ]"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

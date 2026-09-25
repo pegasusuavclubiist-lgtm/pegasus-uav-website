@@ -23,6 +23,16 @@ export interface CreateTeamMemberPayload {
   display_order?: number
 }
 
+export interface UpdateTeamMemberPayload {
+  name?: string
+  role?: string
+  subsystem?: string | null
+  photo_url?: string
+  department?: string
+  linkedin_url?: string | null
+  display_order?: number
+}
+
 export interface TeamMutationResponse {
   success: boolean
   data?: SupabaseTeamMember
@@ -142,10 +152,18 @@ export async function fetchTeamMembers(): Promise<SupabaseTeamMember[]> {
       const localStr = localStorage.getItem(LOCAL_TEAM_CACHE_KEY)
       if (localStr) {
         const localList: SupabaseTeamMember[] = JSON.parse(localStr)
+        const localMap = new Map(localList.map((m) => [m.id, m]))
+
+        // If local cache has updates/edits for an active remote member, merge those updates
+        const mergedRemote = activeRemote.map((m) => {
+          const localOverride = localMap.get(m.id)
+          return localOverride ? { ...m, ...localOverride } : m
+        })
+
         const remoteIds = new Set(activeRemote.map((m) => m.id))
         const unmergedLocals = localList.filter((l) => !remoteIds.has(l.id) && !deletedSet.has(l.id))
 
-        return [...activeRemote, ...unmergedLocals].sort(
+        return [...mergedRemote, ...unmergedLocals].sort(
           (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)
         )
       }
@@ -287,6 +305,123 @@ export async function addTeamMember(payload: CreateTeamMemberPayload): Promise<T
   return {
     success: true,
     data: insertedMember,
+  }
+}
+
+/**
+ * Update an existing member's details in Supabase database and local cache.
+ */
+export async function updateTeamMember(
+  id: string,
+  payload: UpdateTeamMemberPayload
+): Promise<TeamMutationResponse> {
+  const supabase = createClient()
+
+  const supabasePayload: Record<string, unknown> = {}
+  if (payload.name !== undefined) supabasePayload.name = payload.name.trim()
+  if (payload.role !== undefined) supabasePayload.role = payload.role.trim()
+  if (payload.subsystem !== undefined) supabasePayload.subsystem = payload.subsystem?.trim() || null
+  if (payload.photo_url !== undefined) supabasePayload.photo_url = payload.photo_url.trim()
+  if (payload.department !== undefined) supabasePayload.department = (payload.department?.trim() || 'understudy').toLowerCase()
+  if (payload.linkedin_url !== undefined) supabasePayload.linkedin_url = payload.linkedin_url?.trim() || null
+  if (payload.display_order !== undefined) supabasePayload.display_order = payload.display_order
+
+  let updatedMember: SupabaseTeamMember | null = null
+
+  // Optimistically update in local cache
+  if (typeof window !== 'undefined') {
+    try {
+      const prev: SupabaseTeamMember[] = JSON.parse(localStorage.getItem(LOCAL_TEAM_CACHE_KEY) || '[]')
+      const index = prev.findIndex((m) => m.id === id)
+      if (index !== -1) {
+        updatedMember = {
+          ...prev[index],
+          ...supabasePayload,
+        } as SupabaseTeamMember
+        prev[index] = updatedMember
+        localStorage.setItem(LOCAL_TEAM_CACHE_KEY, JSON.stringify(prev))
+      } else {
+        const placeholder: SupabaseTeamMember = {
+          id,
+          name: payload.name?.trim() || '',
+          role: payload.role?.trim() || '',
+          subsystem: payload.subsystem?.trim() || null,
+          photo_url: payload.photo_url?.trim() || '',
+          department: (payload.department?.trim() || 'understudy').toLowerCase(),
+          linkedin_url: payload.linkedin_url?.trim() || null,
+          display_order: payload.display_order ?? 10,
+          created_at: new Date().toISOString(),
+        }
+        updatedMember = placeholder
+        localStorage.setItem(LOCAL_TEAM_CACHE_KEY, JSON.stringify([placeholder, ...prev]))
+      }
+    } catch (err) {
+      console.error('LocalStorage write failed during update:', err)
+    }
+  }
+
+  // If local-only ID, return immediately
+  if (id.startsWith('local-member-')) {
+    return {
+      success: true,
+      data: updatedMember || undefined,
+    }
+  }
+
+  // Supabase update
+  try {
+    const { data, error } = await supabase
+      .from('team_members')
+      .update(supabasePayload)
+      .eq('id', id)
+      .select()
+
+    if (error) {
+      console.warn('Supabase update team member encountered error:', error)
+      const isRls = error.code === '42501' || error.message?.toLowerCase().includes('row-level security')
+
+      return {
+        success: isRls,
+        data: updatedMember || undefined,
+        error: error.message,
+        isRlsError: isRls,
+      }
+    }
+
+    if (data && data[0]) {
+      const remoteUpdated: SupabaseTeamMember = data[0]
+      // Mirror the exact remote updated data into local cache
+      if (typeof window !== 'undefined') {
+        try {
+          const prev: SupabaseTeamMember[] = JSON.parse(localStorage.getItem(LOCAL_TEAM_CACHE_KEY) || '[]')
+          const idx = prev.findIndex((m) => m.id === id)
+          if (idx !== -1) {
+            prev[idx] = remoteUpdated
+            localStorage.setItem(LOCAL_TEAM_CACHE_KEY, JSON.stringify(prev))
+          } else {
+            localStorage.setItem(LOCAL_TEAM_CACHE_KEY, JSON.stringify([remoteUpdated, ...prev]))
+          }
+        } catch {
+          // Ignore cache write error
+        }
+      }
+
+      return {
+        success: true,
+        data: remoteUpdated,
+      }
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown update error'
+    return {
+      success: false,
+      error: message,
+    }
+  }
+
+  return {
+    success: true,
+    data: updatedMember || undefined,
   }
 }
 
