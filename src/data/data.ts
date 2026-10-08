@@ -192,11 +192,29 @@ export interface ConstitutionData {
     foundingFaculty: { name: string; title: string; department: string };
 }
 
+export interface NavbarTickerData {
+    badge: string;
+    text: string;
+    highlight: string;
+    subtext: string;
+    date: string;
+    href: string;
+}
+
 export const siteData = {
+    navbarTicker: {
+        badge: "FLIGHT OPS ALERT",
+        text: "ORION- Drone hackathon from 10th - 11th October",
+        highlight: "ORION-",
+        subtext: "Drone hackathon from 10th - 11th October",
+        date: "10th - 11th October",
+        href: "#join",
+    },
     header: {
         title: "PEGASUS UAV Club · IIST",
         logoUrl: "/pegasus-logo.png",
         navLinks: ["About", "Projects", "Team", "Mentors", "Request Inventory", "Join Us"],
+        tickerText: "ORION- Drone hackathon from 10th - 11th October",
     },
     hero: {
         eyebrow: "Indian Institute of Space Science and Technology",
@@ -220,7 +238,7 @@ export const siteData = {
         visionTitle: "Vision",
         visionText: "To revolutionize the application of autonomous aerial systems across research, governance, and space technology, establishing IIST as a global leader in multidisciplinary UAV development.",
         aboutTitle: "About IIST",
-        aboutText: "The Indian Institute of Space Science and Technology (IIST), located in Thiruvananthapuram, is Asia’s first space university. Functioning directly under the Department of Space, Government of India, IIST was established to serve as a specialized incubator for the nation's space program. By maintaining deep, integrated ties with the Indian Space Research Organisation (ISRO), the institute fosters an unparalleled ecosystem where rigorous academic theory meets the high-stakes, applied engineering demands of advanced aerospace, avionics, and deep-tech innovation.",
+        aboutText: "The Indian Institute of Space Science and Technology (IIST), located in Thiruvananthapuram, is Asia’s first space university.  By maintaining deep, integrated ties with the Indian Space Research Organisation (ISRO), the institute fosters an unparalleled ecosystem where rigorous academic theory meets the high-stakes, applied engineering demands of advanced aerospace, avionics, and deep-tech innovation.",
         campusImageUrl: "/iist-campus.jpg",
         campusTag: "IIST VALIAMALA CAMPUS // 8.6277°N, 77.0379°E",
         campusCaption: "Aerial Perspective · Indian Institute of Space Science and Technology",

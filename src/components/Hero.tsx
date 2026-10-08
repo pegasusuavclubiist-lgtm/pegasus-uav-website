@@ -64,7 +64,7 @@ export default function Hero() {
       ref={containerRef}
       id="hero"
       data-cursor="drone"
-      className="relative w-full min-h-screen flex flex-col justify-between overflow-hidden bg-black text-white pt-24 pb-8"
+      className="relative w-full min-h-screen flex flex-col justify-between overflow-hidden bg-black text-white pt-28 md:pt-32 pb-8"
     >
       {/* Tactical Aerospace Flight Grid Backdrop */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">

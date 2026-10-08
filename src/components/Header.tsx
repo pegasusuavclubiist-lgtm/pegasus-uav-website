@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { siteData } from "@/data/data";
+import NavbarTicker from "@/components/NavbarTicker";
 
 export default function Header() {
   const { header, projectPageUi } = siteData;
@@ -13,7 +14,7 @@ export default function Header() {
   const isSubpage = pathname !== "/";
 
   return (
-    <header className="fixed top-0 left-0 w-full z-40 bg-black/80 backdrop-blur-md border-b border-white/10">
+    <header className="fixed top-0 left-0 w-full z-40 bg-black/80 backdrop-blur-md">
       <div className="max-w-[1800px] mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
         {/* Brand / Title */}
         <Link
@@ -88,6 +89,9 @@ export default function Header() {
           {mobileMenuOpen ? "[ CLOSE ]" : "[ MENU ]"}
         </button>
       </div>
+
+      {/* Marquee Ticker just below the navbar */}
+      <NavbarTicker />
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (

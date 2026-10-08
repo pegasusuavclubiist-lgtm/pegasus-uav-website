@@ -176,7 +176,7 @@ export default function ProjectDetailView({
       {/* Universal Header with intelligent path-aware anchors */}
       <Header />
 
-      <main className="w-full pt-20 md:pt-24 pb-20">
+      <main className="w-full pt-28 md:pt-32 pb-20">
         {/* HUD Sub-Bar / Telemetry Corridor Breadcrumb */}
         <div className="w-full border-b border-white/10 bg-neutral-950/80 backdrop-blur-md">
           <div className="max-w-[1800px] mx-auto px-6 md:px-12 py-3 flex flex-wrap items-center justify-between gap-4 font-mono text-[11px]">
