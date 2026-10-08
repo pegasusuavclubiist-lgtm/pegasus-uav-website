@@ -24,6 +24,17 @@ export interface CreateProjectPayload {
   display_order?: number
 }
 
+export interface UpdateProjectPayload {
+  title?: string
+  status?: string
+  summary?: string
+  description?: string
+  cover_image_url?: string
+  stack?: string[] | null
+  slug?: string
+  display_order?: number
+}
+
 export interface ProjectMutationResponse {
   success: boolean
   data?: SupabaseProject
@@ -189,10 +200,18 @@ export async function fetchProjects(): Promise<SupabaseProject[]> {
       const localStr = localStorage.getItem(LOCAL_PROJECTS_CACHE_KEY)
       if (localStr) {
         const localList: SupabaseProject[] = JSON.parse(localStr)
+        const localMap = new Map(localList.map((p) => [p.id, p]))
+
+        // If local cache has updates/edits for an active remote project, merge those updates
+        const mergedRemote = activeRemote.map((p) => {
+          const localOverride = localMap.get(p.id)
+          return localOverride ? { ...p, ...localOverride } : p
+        })
+
         const remoteIds = new Set(activeRemote.map((p) => p.id))
         const unmergedLocals = localList.filter((l) => !remoteIds.has(l.id) && !deletedSet.has(l.id))
 
-        return [...activeRemote, ...unmergedLocals].sort(
+        return [...mergedRemote, ...unmergedLocals].sort(
           (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)
         )
       }
@@ -341,6 +360,121 @@ export async function deleteProject(id: string): Promise<ProjectMutationResponse
   }
 
   return { success: true }
+}
+
+/**
+ * Update an existing project's details in Supabase database and local cache.
+ */
+export async function updateProject(
+  id: string,
+  payload: UpdateProjectPayload
+): Promise<ProjectMutationResponse> {
+  const supabase = createClient()
+
+  const supabasePayload: Record<string, unknown> = {}
+  if (payload.title !== undefined) supabasePayload.title = payload.title.trim()
+  if (payload.status !== undefined) supabasePayload.status = (payload.status.trim() || 'active').toLowerCase()
+  if (payload.summary !== undefined) supabasePayload.summary = payload.summary.trim()
+  if (payload.description !== undefined) supabasePayload.description = payload.description.trim()
+  if (payload.cover_image_url !== undefined) supabasePayload.cover_image_url = payload.cover_image_url.trim()
+  if (payload.stack !== undefined) supabasePayload.stack = payload.stack || []
+  if (payload.slug !== undefined) supabasePayload.slug = payload.slug.trim()
+  if (payload.display_order !== undefined) supabasePayload.display_order = payload.display_order
+
+  let updatedProject: SupabaseProject | null = null
+
+  // Optimistically update in local cache
+  if (typeof window !== 'undefined') {
+    try {
+      const prev: SupabaseProject[] = JSON.parse(localStorage.getItem(LOCAL_PROJECTS_CACHE_KEY) || '[]')
+      const index = prev.findIndex((p) => p.id === id)
+      if (index !== -1) {
+        updatedProject = {
+          ...prev[index],
+          ...supabasePayload,
+        } as SupabaseProject
+        prev[index] = updatedProject
+        localStorage.setItem(LOCAL_PROJECTS_CACHE_KEY, JSON.stringify(prev))
+      } else {
+        const placeholder: SupabaseProject = {
+          id,
+          title: payload.title?.trim() || '',
+          status: (payload.status?.trim() || 'active').toLowerCase(),
+          summary: payload.summary?.trim() || '',
+          description: payload.description?.trim() || '',
+          cover_image_url: payload.cover_image_url?.trim() || '',
+          stack: payload.stack || [],
+          slug: payload.slug?.trim() || '',
+          display_order: payload.display_order ?? 0,
+          created_at: new Date().toISOString(),
+        }
+        updatedProject = placeholder
+        localStorage.setItem(LOCAL_PROJECTS_CACHE_KEY, JSON.stringify([placeholder, ...prev]))
+      }
+    } catch (err) {
+      console.error('LocalStorage write failed during project update:', err)
+    }
+  }
+
+  // If local-only ID, return immediately
+  if (id.startsWith('local-project-')) {
+    return {
+      success: true,
+      data: updatedProject || undefined,
+    }
+  }
+
+  // Supabase remote update
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .update(supabasePayload)
+      .eq('id', id)
+      .select()
+
+    if (error) {
+      console.warn('Supabase update project encountered error:', error)
+      const isRls = error.code === '42501' || error.message?.toLowerCase().includes('row-level security')
+
+      return {
+        success: isRls,
+        data: updatedProject || undefined,
+        error: error.message,
+        isRlsError: isRls,
+      }
+    }
+
+    if (data && data[0]) {
+      const remoteUpdated: SupabaseProject = data[0]
+      // Mirror the exact remote updated data into local cache
+      if (typeof window !== 'undefined') {
+        try {
+          const prev: SupabaseProject[] = JSON.parse(localStorage.getItem(LOCAL_PROJECTS_CACHE_KEY) || '[]')
+          const idx = prev.findIndex((p) => p.id === id)
+          if (idx !== -1) {
+            prev[idx] = remoteUpdated
+            localStorage.setItem(LOCAL_PROJECTS_CACHE_KEY, JSON.stringify(prev))
+          }
+        } catch {}
+      }
+
+      return {
+        success: true,
+        data: remoteUpdated,
+      }
+    }
+
+    return {
+      success: true,
+      data: updatedProject || undefined,
+    }
+  } catch (err: unknown) {
+    console.error('Project update exception:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unknown error during update',
+    }
+  }
 }
 
 /**

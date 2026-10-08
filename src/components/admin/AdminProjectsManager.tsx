@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   fetchProjects,
   addProject,
+  updateProject,
   deleteProject,
   uploadProjectCover,
   generateProjectSlug,
@@ -38,6 +39,19 @@ export default function AdminProjectsManager() {
   // Deletion modal state
   const [deleteTarget, setDeleteTarget] = useState<SupabaseProject | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Edit modal states
+  const [editingProject, setEditingProject] = useState<SupabaseProject | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editStatus, setEditStatus] = useState("active");
+  const [editSummary, setEditSummary] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editCoverImageUrl, setEditCoverImageUrl] = useState("");
+  const [editStackInput, setEditStackInput] = useState("");
+  const [editSlug, setEditSlug] = useState("");
+  const [editDisplayOrder, setEditDisplayOrder] = useState<number>(0);
+  const [uploadingEditCover, setUploadingEditCover] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // RLS SQL Helper state
   const [showSqlHelper, setShowSqlHelper] = useState(false);
@@ -181,6 +195,144 @@ export default function AdminProjectsManager() {
     }
   };
 
+  // Open Edit Modal with preloaded project details
+  const openEditModal = (project: SupabaseProject) => {
+    setEditingProject(project);
+    setEditTitle(project.title || "");
+    setEditStatus((project.status || "active").toLowerCase());
+    setEditSummary(project.summary || "");
+    setEditDescription(project.description || "");
+    setEditCoverImageUrl(project.cover_image_url || "");
+    setEditStackInput((project.stack || []).join(", "));
+    setEditSlug(project.slug || "");
+    setEditDisplayOrder(project.display_order ?? 0);
+  };
+
+  const closeEditModal = () => {
+    if (savingEdit) return;
+    setEditingProject(null);
+    setUploadingEditCover(false);
+  };
+
+  // Upload cover specifically in edit modal
+  const handleEditCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingEditCover(true);
+    setStatusMessage({
+      type: "info",
+      text: "TRANSMITTING UPDATED COVER TO MEDIA STORAGE...",
+    });
+
+    const res = await uploadProjectCover(file);
+    setUploadingEditCover(false);
+
+    if (res.success && res.publicUrl) {
+      setEditCoverImageUrl(res.publicUrl);
+      if (res.isRlsFallback) {
+        setStatusMessage({
+          type: "info",
+          text: "COVER ATTACHED DIRECTLY (Storage RLS active: image encoded for instant save)",
+        });
+        setShowSqlHelper(true);
+      } else {
+        setStatusMessage({
+          type: "success",
+          text: "UPDATED COVER HOSTED & ATTACHED SUCCESSFULLY",
+        });
+      }
+      setTimeout(() => setStatusMessage(null), 4000);
+    } else {
+      setStatusMessage({
+        type: "error",
+        text: `STORAGE NOTICE: ${res.error || "Upload policy active. You can paste a public cover image URL directly."}`,
+      });
+    }
+  };
+
+  // Save changes to project specification
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProject) return;
+
+    if (!editTitle.trim()) {
+      setStatusMessage({ type: "error", text: "PROJECT TITLE IS REQUIRED" });
+      return;
+    }
+    if (!editSummary.trim()) {
+      setStatusMessage({ type: "error", text: "PROJECT SUMMARY IS REQUIRED" });
+      return;
+    }
+    if (!editDescription.trim()) {
+      setStatusMessage({ type: "error", text: "PROJECT DESCRIPTION IS REQUIRED" });
+      return;
+    }
+    if (!editCoverImageUrl.trim()) {
+      setStatusMessage({ type: "error", text: "PROJECT COVER IMAGE IS REQUIRED (UPLOAD OR URL)" });
+      return;
+    }
+
+    setSavingEdit(true);
+    setStatusMessage({
+      type: "info",
+      text: "TRANSMITTING SPECIFICATION UPDATES TO DATABASE...",
+    });
+
+    const stackArray = editStackInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    const payload = {
+      title: editTitle.trim(),
+      status: editStatus.trim() || "active",
+      summary: editSummary.trim(),
+      description: editDescription.trim(),
+      cover_image_url: editCoverImageUrl.trim(),
+      stack: stackArray,
+      slug: editSlug.trim() || generateProjectSlug(editTitle),
+      display_order: editDisplayOrder,
+    };
+
+    // Optimistically update React state
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === editingProject.id
+          ? {
+              ...p,
+              ...payload,
+              stack: stackArray,
+            }
+          : p
+      )
+    );
+
+    const res = await updateProject(editingProject.id, payload);
+    setSavingEdit(false);
+
+    if (res.success) {
+      setStatusMessage({
+        type: "success",
+        text: res.isRlsError
+          ? "PROJECT UPDATES SAVED (CACHED LOCALLY — RUN RLS SQL SCRIPT IN SUPABASE TO ENABLE DIRECT WRITES)"
+          : "PROJECT SPECIFICATIONS UPDATED & SAVED IN DATABASE SUCCESSFULLY",
+      });
+      if (res.isRlsError) {
+        setShowSqlHelper(true);
+      }
+      setEditingProject(null);
+      loadProjects();
+      setTimeout(() => setStatusMessage(null), 4000);
+    } else {
+      setStatusMessage({
+        type: "error",
+        text: `UPDATE FAILED: ${res.error || "Database error"}`,
+      });
+      loadProjects();
+    }
+  };
+
   // Execute project removal
   const executeDelete = async () => {
     if (!deleteTarget) return;
@@ -280,9 +432,11 @@ export default function AdminProjectsManager() {
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read projects" ON public.projects;
 DROP POLICY IF EXISTS "Allow public insert projects" ON public.projects;
+DROP POLICY IF EXISTS "Allow public update projects" ON public.projects;
 DROP POLICY IF EXISTS "Allow public delete projects" ON public.projects;
 CREATE POLICY "Allow public read projects" ON public.projects FOR SELECT TO anon, authenticated USING (true);
 CREATE POLICY "Allow public insert projects" ON public.projects FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Allow public update projects" ON public.projects FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public delete projects" ON public.projects FOR DELETE TO anon, authenticated USING (true);`}
           </pre>
         </div>
@@ -683,19 +837,27 @@ CREATE POLICY "Allow public delete projects" ON public.projects FOR DELETE TO an
                   )}
                 </div>
 
-                {/* Card Footer: Metadata & Remove Action */}
-                <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between font-mono text-[10px]">
+                {/* Card Footer: Metadata & Actions */}
+                <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px]">
                   <span className="text-neutral-500">
                     RECORDED: {new Date(project.created_at).toLocaleDateString()}
                   </span>
 
-                  <button
-                    onClick={() => setDeleteTarget(project)}
-                    disabled={isDeleting}
-                    className="uppercase tracking-wider text-red-400 hover:text-red-300 hover:bg-red-950/40 px-2.5 py-1 border border-red-500/30 hover:border-red-500 transition-colors"
-                  >
-                    {isDeleting ? "[ EXPUNGING... ]" : "[ REMOVE PROJECT ]"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openEditModal(project)}
+                      className="uppercase tracking-wider text-[#e2f952] hover:text-black hover:bg-[#e2f952] px-2.5 py-1 border border-[#e2f952]/40 hover:border-[#e2f952] transition-colors font-semibold"
+                    >
+                      [ EDIT PROJECT ]
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(project)}
+                      disabled={isDeleting}
+                      className="uppercase tracking-wider text-red-400 hover:text-red-300 hover:bg-red-950/40 px-2.5 py-1 border border-red-500/30 hover:border-red-500 transition-colors"
+                    >
+                      {isDeleting ? "[ EXPUNGING... ]" : "[ REMOVE ]"}
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -703,7 +865,268 @@ CREATE POLICY "Allow public delete projects" ON public.projects FOR DELETE TO an
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Edit Project Specification Modal */}
+      {editingProject && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 sm:p-6 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeEditModal();
+          }}
+        >
+          <div className="bg-neutral-950 border-2 border-[#e2f952] max-w-4xl w-full p-6 sm:p-8 my-auto relative shadow-[0_0_50px_rgba(226,249,82,0.2)] animate-in fade-in duration-200">
+            {/* Corner Reticle Accents */}
+            <span className="absolute top-2 left-2 w-2 h-2 border-t-2 border-l-2 border-[#e2f952] pointer-events-none" />
+            <span className="absolute top-2 right-2 w-2 h-2 border-t-2 border-r-2 border-[#e2f952] pointer-events-none" />
+            <span className="absolute bottom-2 left-2 w-2 h-2 border-b-2 border-l-2 border-[#e2f952] pointer-events-none" />
+            <span className="absolute bottom-2 right-2 w-2 h-2 border-b-2 border-r-2 border-[#e2f952] pointer-events-none" />
+
+            <div className="flex items-start justify-between pb-4 mb-6 border-b border-white/10">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#e2f952] animate-pulse" />
+                  <h3 className="font-mono text-sm sm:text-base uppercase tracking-widest text-[#e2f952] font-black">
+                    [ EDIT PROJECT SPECIFICATIONS // {editingProject.title.toUpperCase()} ]
+                  </h3>
+                </div>
+                <p className="font-mono text-[10px] text-neutral-400 uppercase tracking-widest">
+                  DATABASE ID: <span className="text-white">{editingProject.id}</span> · TABLE: projects · SLUG: <span className="text-[#e2f952]">{editingProject.slug}</span>
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEditModal}
+                disabled={savingEdit}
+                className="text-neutral-400 hover:text-white font-mono text-sm uppercase px-2 py-1 border border-white/10 hover:border-white/40 transition-colors"
+                title="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-6">
+              {/* Row 1: Title & Status */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider mb-2">
+                    Project Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="e.g. Flying Wings: National Defence Hackathon"
+                    className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs sm:text-sm px-4 py-3 outline-none transition-colors"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider mb-2">
+                    Operational Status *
+                  </label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                    className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs sm:text-sm px-4 py-3 outline-none transition-colors uppercase"
+                  >
+                    <option value="active">ACTIVE (In Build)</option>
+                    <option value="ongoing">ONGOING (Flight Testing)</option>
+                    <option value="completed">COMPLETED (Mission Proven)</option>
+                    <option value="research">RESEARCH (Feasibility)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: Summary */}
+              <div>
+                <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider mb-2">
+                  Project Summary *
+                </label>
+                <input
+                  type="text"
+                  value={editSummary}
+                  onChange={(e) => setEditSummary(e.target.value)}
+                  placeholder="e.g. Engineering a GPS-denied quadcopter capable of autonomous waypoint navigation..."
+                  className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-4 py-3 outline-none transition-colors"
+                  required
+                />
+              </div>
+
+              {/* Row 3: Description */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider">
+                    Full Technical Description & Mission Objectives *
+                  </label>
+                  <span className="font-mono text-[10px] text-neutral-500">
+                    COLUMN: description
+                  </span>
+                </div>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={5}
+                  placeholder="Comprehensive technical breakdown, operational parameters, sensors used, payload configurations..."
+                  className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-4 py-3 outline-none transition-colors leading-relaxed resize-y"
+                  required
+                />
+              </div>
+
+              {/* Row 4: Cover Image Upload & Preview */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                <div className="md:col-span-8 space-y-4">
+                  <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider">
+                    Project Cover Image *
+                  </label>
+
+                  {/* File Upload Box */}
+                  <div className="relative border border-dashed border-white/20 p-5 hover:border-[#e2f952] transition-colors text-center cursor-pointer bg-neutral-900/60">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditCoverUpload}
+                      disabled={uploadingEditCover}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="font-mono text-xs text-neutral-400 flex flex-col items-center gap-1.5">
+                      <span className="text-[#e2f952] font-bold">
+                        {uploadingEditCover ? "UPLOADING COVER TO CLOUD STORAGE..." : "📁 CLICK OR DROP REPLACEMENT COVER IMAGE"}
+                      </span>
+                      <span className="text-[10px] text-neutral-500">
+                        Uploads directly to Supabase storage bucket `media/projects/`
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Direct Image URL input */}
+                  <div>
+                    <label className="block font-mono text-[10px] text-neutral-500 uppercase tracking-wider mb-1">
+                      Or paste direct hosted cover image URL:
+                    </label>
+                    <input
+                      type="url"
+                      value={editCoverImageUrl}
+                      onChange={(e) => setEditCoverImageUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full bg-neutral-900 border border-white/15 focus:border-[#e2f952] text-white font-mono text-xs px-3 py-2 outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Cover Preview Tile */}
+                <div className="md:col-span-4 bg-neutral-900 border border-white/15 p-4 flex flex-col items-center justify-center min-h-[160px]">
+                  <span className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest mb-3">
+                    COVER PREVIEW
+                  </span>
+                  {editCoverImageUrl ? (
+                    <div className="relative w-full aspect-video border border-[#e2f952] overflow-hidden bg-black">
+                      <Image
+                        src={editCoverImageUrl}
+                        alt="Project Preview"
+                        fill
+                        unoptimized={editCoverImageUrl.startsWith("data:")}
+                        className="object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditCoverImageUrl("")}
+                        className="absolute top-1 right-1 bg-red-600 text-white text-[9px] font-mono px-1 py-0.5"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-full aspect-video border border-white/10 flex flex-col items-center justify-center text-neutral-600 font-mono text-[10px] text-center p-2">
+                      <span>[ NO COVER IMAGE ]</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 5: Tech Stack, Slug & Display Order */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider mb-2">
+                    Subsystem Tech Stack (Comma-Separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={editStackInput}
+                    onChange={(e) => setEditStackInput(e.target.value)}
+                    placeholder="e.g. Pixhawk 6C, Jetson Orin Nano, OpenCV, ROS2"
+                    className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-4 py-3 outline-none transition-colors"
+                  />
+                  {/* Real-time Stack Preview */}
+                  {editStackInput.trim() && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {editStackInput
+                        .split(",")
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .map((s, idx) => (
+                          <span
+                            key={idx}
+                            className="px-1.5 py-0.5 bg-[#e2f952]/10 border border-[#e2f952]/30 text-[#e2f952] font-mono text-[9px] uppercase"
+                          >
+                            {s}
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider mb-2">
+                    URL Route Slug *
+                  </label>
+                  <input
+                    type="text"
+                    value={editSlug}
+                    onChange={(e) => setEditSlug(e.target.value)}
+                    placeholder="e.g. flying-wings-defense"
+                    className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-4 py-3 outline-none transition-colors"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-mono text-[11px] text-neutral-300 uppercase tracking-wider mb-2">
+                    Display Priority Order
+                  </label>
+                  <input
+                    type="number"
+                    value={editDisplayOrder}
+                    onChange={(e) => setEditDisplayOrder(parseInt(e.target.value) || 0)}
+                    min={0}
+                    className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-4 py-3 outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-white/10 font-mono text-xs">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  disabled={savingEdit}
+                  className="px-6 py-2.5 uppercase tracking-wider text-neutral-400 hover:text-white border border-white/15 transition-colors disabled:opacity-50"
+                >
+                  [ CANCEL ]
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={savingEdit || uploadingEditCover}
+                  className="px-8 py-3 bg-[#e2f952] text-black uppercase tracking-wider font-bold border border-[#e2f952] hover:bg-white hover:border-white transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(226,249,82,0.3)]"
+                >
+                  {savingEdit ? "[ TRANSMITTING SPECIFICATIONS... ]" : "[ SAVE SPECIFICATIONS // UPDATE RECORD ]"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-neutral-950 border-2 border-red-500/80 max-w-md w-full p-6 space-y-6 shadow-[0_0_40px_rgba(239,68,68,0.2)]">
