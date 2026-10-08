@@ -9,9 +9,7 @@ import Marquee from "@/components/Marquee";
 import Mission from "@/components/Mission";
 import DroneDeliveryDivider from "@/components/DroneDeliveryDivider";
 import Projects from "@/components/Projects";
-import Team from "@/components/Team";
 import Mentors from "@/components/Mentors";
-import RequestInventory from "@/components/RequestInventory";
 import JoinUs from "@/components/JoinUs";
 import Footer from "@/components/Footer";
 
@@ -40,11 +38,9 @@ export default function Home() {
         <Hero />
         <Marquee text="INNOVATE. BUILD. FLY." />
         <Mission />
-        <DroneDeliveryDivider />
+
         <Projects />
-        <Team />
         <Mentors />
-        <RequestInventory />
         <JoinUs />
       </main>
       <Footer />

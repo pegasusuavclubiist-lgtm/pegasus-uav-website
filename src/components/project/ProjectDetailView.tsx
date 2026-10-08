@@ -31,6 +31,7 @@ export default function ProjectDetailView({
   const avionicsRef = useRef<HTMLDivElement>(null);
   const missionRef = useRef<HTMLDivElement>(null);
   const logsRef = useRef<HTMLDivElement>(null);
+  const weeklyRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
@@ -140,6 +141,25 @@ export default function ProjectDetailView({
               ease: "power2.out",
               scrollTrigger: {
                 trigger: logsRef.current,
+                start: "top 85%",
+              },
+            }
+          );
+        }
+
+        // Weekly sprint cards reveal
+        if (weeklyRef.current) {
+          gsap.fromTo(
+            weeklyRef.current.querySelectorAll(".weekly-cadence-card") || [],
+            { opacity: 0, y: 25 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.6,
+              stagger: 0.08,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: weeklyRef.current,
                 start: "top 85%",
               },
             }
@@ -572,7 +592,141 @@ export default function ProjectDetailView({
           </section>
         )}
 
-        {/* Section 7: Next Project Runway & Navigation */}
+        {/* Section 7: Weekly Sprint & Engineering Cadence */}
+        {project.weeklyUpdates && project.weeklyUpdates.length > 0 && (
+          <section
+            ref={weeklyRef}
+            className="max-w-[1800px] mx-auto px-6 md:px-12 py-16 md:py-24 border-b border-white/15"
+          >
+            {/* Header Ribbon */}
+            <div className="border-b border-white/15 pb-6 mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+              <div>
+                <span className="font-mono text-xs uppercase tracking-widest text-[#e2f952]">
+                  [ {projectPageUi.weeklySectionNumber} ]
+                </span>
+                <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tight text-white mt-2">
+                  {projectPageUi.weeklyHeadline}
+                </h2>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-end gap-6 max-w-lg">
+                <p className="font-mono text-xs text-neutral-400">
+                  {projectPageUi.weeklyDescription}
+                </p>
+                <div className="bg-neutral-950 border border-white/15 px-4 py-2 font-mono text-[11px] shrink-0">
+                  <span className="text-neutral-500">{projectPageUi.weeklyTotalWeeksLabel}: </span>
+                  <span className="text-[#e2f952] font-bold">{project.weeklyUpdates.length}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Weekly Timeline Cards */}
+            <div className="space-y-6">
+              {project.weeklyUpdates.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  className="weekly-cadence-card bg-neutral-950 border border-white/15 hover:border-[#e2f952] transition-all p-6 sm:p-8 relative group"
+                >
+                  {/* Card Reticle Accents */}
+                  <span className="absolute top-2 left-2 w-2 h-2 border-t border-l border-white/20 group-hover:border-[#e2f952] transition-colors pointer-events-none" />
+                  <span className="absolute top-2 right-2 w-2 h-2 border-t border-r border-white/20 group-hover:border-[#e2f952] transition-colors pointer-events-none" />
+                  <span className="absolute bottom-2 left-2 w-2 h-2 border-b border-l border-white/20 group-hover:border-[#e2f952] transition-colors pointer-events-none" />
+                  <span className="absolute bottom-2 right-2 w-2 h-2 border-b border-r border-white/20 group-hover:border-[#e2f952] transition-colors pointer-events-none" />
+
+                  {/* Top Metadata Row */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-white/10 font-mono text-xs">
+                    <div className="flex items-center gap-3">
+                      <span className="px-2.5 py-1 bg-white/5 border border-white/20 text-white font-bold tracking-wider uppercase">
+                        [ {item.weekNumber} ]
+                      </span>
+                      <span className="text-neutral-400 text-[11px]">
+                        // {item.dateRange}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-neutral-500 text-[10px] uppercase">
+                        {projectPageUi.weeklyStatusPrefix}:
+                      </span>
+                      <span
+                        className={`px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
+                          item.status === "COMPLETED"
+                            ? "border-[#e2f952] text-[#e2f952] bg-[#e2f952]/10"
+                            : item.status === "IN_PROGRESS"
+                            ? "border-blue-400 text-blue-400 bg-blue-500/10"
+                            : item.status === "TESTING"
+                            ? "border-purple-400 text-purple-400 bg-purple-500/10"
+                            : item.status === "BLOCKED"
+                            ? "border-red-400 text-red-400 bg-red-500/10"
+                            : "border-neutral-500 text-neutral-300 bg-neutral-800"
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Title & Summary */}
+                  <div className="space-y-3">
+                    <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white group-hover:text-[#e2f952] transition-colors">
+                      {item.title}
+                    </h3>
+                    <p className="font-sans text-sm sm:text-base text-neutral-300 font-light leading-relaxed">
+                      {item.summary}
+                    </p>
+                  </div>
+
+                  {/* Milestones Checklist */}
+                  {item.highlights && item.highlights.length > 0 && (
+                    <div className="mt-6 pt-5 border-t border-white/10 space-y-2">
+                      <div className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest">
+                        [ {projectPageUi.weeklyMilestonesLabel} ]
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 font-mono text-xs">
+                        {item.highlights.map((highlight, hIdx) => (
+                          <div
+                            key={hIdx}
+                            className="flex items-start gap-2 text-neutral-300 bg-white/[0.02] p-2.5 border border-white/5"
+                          >
+                            <span className="text-[#e2f952] font-bold shrink-0">✓</span>
+                            <span>{highlight}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Telemetry / Metrics & Roadblock Callouts */}
+                  {(item.flightHoursOrTests || item.blockersOrRisks) && (
+                    <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
+                      {item.flightHoursOrTests && (
+                        <div className="bg-neutral-900/60 border border-white/10 p-3">
+                          <span className="text-neutral-500 text-[10px] uppercase block mb-1">
+                            {projectPageUi.weeklyTelemetryLabel}
+                          </span>
+                          <span className="text-[#e2f952] font-semibold">
+                            {item.flightHoursOrTests}
+                          </span>
+                        </div>
+                      )}
+                      {item.blockersOrRisks && (
+                        <div className="bg-amber-950/20 border border-amber-500/20 p-3">
+                          <span className="text-amber-400 text-[10px] uppercase block mb-1">
+                            {projectPageUi.weeklyBlockersLabel}
+                          </span>
+                          <span className="text-neutral-300 text-[11px] font-light">
+                            {item.blockersOrRisks}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Section 8: Next Project Runway & Navigation */}
         {nextProject && (
           <section className="max-w-[1800px] mx-auto px-6 md:px-12 py-16 md:py-24">
             <div className="font-mono text-xs uppercase tracking-widest text-neutral-500 mb-6">

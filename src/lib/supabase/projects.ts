@@ -1,4 +1,5 @@
 import { createClient } from './client'
+import { ProjectWeeklyDetail, siteData } from '@/data/data'
 
 export interface SupabaseProject {
   id: string
@@ -11,6 +12,7 @@ export interface SupabaseProject {
   display_order: number
   created_at: string
   slug: string
+  weekly_updates?: ProjectWeeklyDetail[] | null
 }
 
 export interface CreateProjectPayload {
@@ -22,6 +24,7 @@ export interface CreateProjectPayload {
   stack?: string[] | null
   slug?: string
   display_order?: number
+  weekly_updates?: ProjectWeeklyDetail[] | null
 }
 
 export interface UpdateProjectPayload {
@@ -33,6 +36,7 @@ export interface UpdateProjectPayload {
   stack?: string[] | null
   slug?: string
   display_order?: number
+  weekly_updates?: ProjectWeeklyDetail[] | null
 }
 
 export interface ProjectMutationResponse {
@@ -44,6 +48,27 @@ export interface ProjectMutationResponse {
 
 const LOCAL_PROJECTS_CACHE_KEY = 'pegasus_local_projects_cache'
 const LOCAL_PROJECTS_DELETED_KEY = 'pegasus_local_projects_deleted'
+const LOCAL_PROJECT_WEEKLY_PREFIX = 'pegasus_weekly_log_'
+
+function getStoredWeeklyUpdates(id: string, slug?: string): ProjectWeeklyDetail[] | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(`${LOCAL_PROJECT_WEEKLY_PREFIX}${id}`) ||
+      (slug ? localStorage.getItem(`${LOCAL_PROJECT_WEEKLY_PREFIX}${slug}`) : null)
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return null
+}
+
+function saveStoredWeeklyUpdates(id: string, updates: ProjectWeeklyDetail[], slug?: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(`${LOCAL_PROJECT_WEEKLY_PREFIX}${id}`, JSON.stringify(updates))
+    if (slug) {
+      localStorage.setItem(`${LOCAL_PROJECT_WEEKLY_PREFIX}${slug}`, JSON.stringify(updates))
+    }
+  } catch {}
+}
 
 /**
  * Convert an image File to an optimized base64 Data URL.
@@ -160,7 +185,31 @@ export async function syncLocalProjectsToSupabase(): Promise<number> {
 }
 
 /**
- * Fetch all projects from Supabase, merged with optimistic local fallback cache.
+ * Enrich a project with weekly updates from remote, localStorage, or curated siteData.
+ */
+function enrichWithWeeklyUpdates(project: SupabaseProject): SupabaseProject {
+  if (project.weekly_updates && project.weekly_updates.length > 0) {
+    return project
+  }
+  const localStored = getStoredWeeklyUpdates(project.id, project.slug)
+  if (localStored && localStored.length > 0) {
+    return { ...project, weekly_updates: localStored }
+  }
+  const cleanSlug = project.slug?.toLowerCase().trim()
+  if (cleanSlug) {
+    for (const [key, detail] of Object.entries(siteData.projectDetails)) {
+      if (cleanSlug.includes(key) || key.includes(cleanSlug)) {
+        if (detail.weeklyUpdates && detail.weeklyUpdates.length > 0) {
+          return { ...project, weekly_updates: detail.weeklyUpdates }
+        }
+      }
+    }
+  }
+  return project
+}
+
+/**
+ * Fetch all projects from Supabase, merged with optimistic local fallback cache and weekly updates.
  */
 export async function fetchProjects(): Promise<SupabaseProject[]> {
   const supabase = createClient()
@@ -180,7 +229,7 @@ export async function fetchProjects(): Promise<SupabaseProject[]> {
   if (error) {
     console.error('Error fetching projects from Supabase:', error)
   } else if (data) {
-    remoteProjects = data.map((project) => ({
+    remoteProjects = data.map((project) => enrichWithWeeklyUpdates({
       ...project,
       title: project.title?.trim(),
       summary: project.summary?.trim(),
@@ -199,13 +248,13 @@ export async function fetchProjects(): Promise<SupabaseProject[]> {
 
       const localStr = localStorage.getItem(LOCAL_PROJECTS_CACHE_KEY)
       if (localStr) {
-        const localList: SupabaseProject[] = JSON.parse(localStr)
+        const localList: SupabaseProject[] = JSON.parse(localStr).map(enrichWithWeeklyUpdates)
         const localMap = new Map(localList.map((p) => [p.id, p]))
 
         // If local cache has updates/edits for an active remote project, merge those updates
         const mergedRemote = activeRemote.map((p) => {
           const localOverride = localMap.get(p.id)
-          return localOverride ? { ...p, ...localOverride } : p
+          return localOverride ? enrichWithWeeklyUpdates({ ...p, ...localOverride }) : p
         })
 
         const remoteIds = new Set(activeRemote.map((p) => p.id))
@@ -233,9 +282,14 @@ export async function fetchProjectBySlug(slug: string): Promise<SupabaseProject 
     const allProjects = await fetchProjects()
     const normalizedSlug = slug.toLowerCase().trim()
     const match = allProjects.find(
-      (p) => p.slug?.toLowerCase().trim() === normalizedSlug || p.id === slug
+      (p) =>
+        p.slug?.toLowerCase().trim() === normalizedSlug ||
+        p.id === slug ||
+        p.slug?.toLowerCase().trim().startsWith(normalizedSlug) ||
+        normalizedSlug.startsWith(p.slug?.toLowerCase().trim()) ||
+        (p.title && generateProjectSlug(p.title).startsWith(normalizedSlug))
     )
-    return match || null
+    return match ? enrichWithWeeklyUpdates(match) : null
   } catch (err) {
     console.error('Error fetching project by slug:', err)
     return null
@@ -380,6 +434,10 @@ export async function updateProject(
   if (payload.stack !== undefined) supabasePayload.stack = payload.stack || []
   if (payload.slug !== undefined) supabasePayload.slug = payload.slug.trim()
   if (payload.display_order !== undefined) supabasePayload.display_order = payload.display_order
+  if (payload.weekly_updates !== undefined) {
+    supabasePayload.weekly_updates = payload.weekly_updates
+    saveStoredWeeklyUpdates(id, payload.weekly_updates || [], payload.slug)
+  }
 
   let updatedProject: SupabaseProject | null = null
 
@@ -392,6 +450,7 @@ export async function updateProject(
         updatedProject = {
           ...prev[index],
           ...supabasePayload,
+          weekly_updates: payload.weekly_updates !== undefined ? payload.weekly_updates : prev[index]?.weekly_updates,
         } as SupabaseProject
         prev[index] = updatedProject
         localStorage.setItem(LOCAL_PROJECTS_CACHE_KEY, JSON.stringify(prev))
@@ -407,6 +466,7 @@ export async function updateProject(
           slug: payload.slug?.trim() || '',
           display_order: payload.display_order ?? 0,
           created_at: new Date().toISOString(),
+          weekly_updates: payload.weekly_updates ?? null,
         }
         updatedProject = placeholder
         localStorage.setItem(LOCAL_PROJECTS_CACHE_KEY, JSON.stringify([placeholder, ...prev]))
@@ -426,11 +486,25 @@ export async function updateProject(
 
   // Supabase remote update
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('projects')
       .update(supabasePayload)
       .eq('id', id)
       .select()
+
+    // If weekly_updates column is not yet present on remote Supabase table:
+    if (error && (error.message?.includes('weekly_updates') || error.code === 'PGRST204')) {
+      console.warn('weekly_updates column not in Supabase table schema yet, retrying update without column...')
+      const fallbackPayload = { ...supabasePayload }
+      delete fallbackPayload.weekly_updates
+      const retryRes = await supabase
+        .from('projects')
+        .update(fallbackPayload)
+        .eq('id', id)
+        .select()
+      data = retryRes.data
+      error = retryRes.error
+    }
 
     if (error) {
       console.warn('Supabase update project encountered error:', error)
@@ -445,7 +519,12 @@ export async function updateProject(
     }
 
     if (data && data[0]) {
-      const remoteUpdated: SupabaseProject = data[0]
+      const remoteUpdated: SupabaseProject = {
+        ...data[0],
+        weekly_updates: payload.weekly_updates !== undefined
+          ? payload.weekly_updates
+          : (data[0].weekly_updates || getStoredWeeklyUpdates(id, payload.slug)),
+      }
       // Mirror the exact remote updated data into local cache
       if (typeof window !== 'undefined') {
         try {

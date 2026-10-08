@@ -6,12 +6,24 @@ export interface SupabaseUpdate {
   content: string
   image_url: string | null
   created_at: string
+  is_ticker?: boolean
+  ticker_badge?: string
 }
 
 export interface CreateUpdatePayload {
   title: string
   content: string
   image_url?: string | null
+  is_ticker?: boolean
+  ticker_badge?: string
+}
+
+export interface UpdateUpdatePayload {
+  title?: string
+  content?: string
+  image_url?: string | null
+  is_ticker?: boolean
+  ticker_badge?: string
 }
 
 export interface UpdateMutationResponse {
@@ -21,8 +33,43 @@ export interface UpdateMutationResponse {
   isRlsError?: boolean
 }
 
+export interface TickerBroadcastConfig {
+  enabled: boolean
+  mode: 'stream_updates' | 'custom' | 'hybrid'
+  badge: string
+  headline: string
+  highlight: string
+  subtext: string
+  date: string
+  href: string
+  updated_at: string
+}
+
+export interface MarqueeTickerItem {
+  id: string
+  badge: string
+  highlight: string
+  subtext: string
+  date?: string
+  href: string
+}
+
 const LOCAL_UPDATES_KEY = 'pegasus_local_updates_cache'
 const LOCAL_UPDATES_DELETED_KEY = 'pegasus_local_updates_deleted'
+export const LOCAL_TICKER_BROADCAST_KEY = 'pegasus_marquee_ticker_broadcast'
+export const TICKER_CHANGE_EVENT = 'pegasus_ticker_change'
+
+export const DEFAULT_TICKER_BROADCAST: TickerBroadcastConfig = {
+  enabled: true,
+  mode: 'hybrid',
+  badge: 'FLIGHT OPS ALERT',
+  headline: 'ORION- Drone hackathon from 10th - 11th October',
+  highlight: 'ORION-',
+  subtext: 'Drone hackathon from 10th - 11th October',
+  date: '10th - 11th October',
+  href: '#join',
+  updated_at: new Date().toISOString(),
+}
 
 /**
  * Convert an image File to an optimized base64 Data URL.
@@ -336,3 +383,164 @@ export async function uploadUpdateMedia(file: File): Promise<{
     error: 'Storage RLS policy active. Please paste an image URL or run the Supabase Storage SQL script.',
   }
 }
+
+/**
+ * Update an existing mission update dispatch in Supabase and local cache.
+ */
+export async function updateUpdate(
+  id: string,
+  payload: UpdateUpdatePayload
+): Promise<UpdateMutationResponse> {
+  const supabase = createClient()
+  const cleanPayload: Record<string, unknown> = {}
+  if (payload.title !== undefined) cleanPayload.title = payload.title.trim()
+  if (payload.content !== undefined) cleanPayload.content = payload.content.trim()
+  if (payload.image_url !== undefined) cleanPayload.image_url = payload.image_url?.trim() || null
+
+  // Update local cache optimistically
+  if (typeof window !== 'undefined') {
+    try {
+      const prevStr = localStorage.getItem(LOCAL_UPDATES_KEY)
+      if (prevStr) {
+        const list: SupabaseUpdate[] = JSON.parse(prevStr)
+        const updated = list.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                ...cleanPayload,
+                ...(payload.is_ticker !== undefined ? { is_ticker: payload.is_ticker } : {}),
+                ...(payload.ticker_badge !== undefined ? { ticker_badge: payload.ticker_badge } : {}),
+              }
+            : item
+        )
+        localStorage.setItem(LOCAL_UPDATES_KEY, JSON.stringify(updated))
+      }
+      window.dispatchEvent(new CustomEvent(TICKER_CHANGE_EVENT))
+    } catch (err) {
+      console.error('Local cache update failed:', err)
+    }
+  }
+
+  if (id.startsWith('local-post-')) {
+    return {
+      success: true,
+      data: {
+        id,
+        title: (cleanPayload.title as string) || '',
+        content: (cleanPayload.content as string) || '',
+        image_url: (cleanPayload.image_url as string) || null,
+        created_at: new Date().toISOString(),
+        is_ticker: payload.is_ticker,
+        ticker_badge: payload.ticker_badge,
+      },
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('updates')
+    .update(cleanPayload)
+    .eq('id', id)
+    .select()
+
+  if (error) {
+    console.warn('Supabase update update error:', error)
+    return {
+      success: false,
+      error: error.message,
+      isRlsError: error.code === '42501' || error.message?.toLowerCase().includes('row-level security'),
+    }
+  }
+
+  return {
+    success: true,
+    data: data?.[0],
+  }
+}
+
+/**
+ * Retrieve current ticker broadcast configuration from local storage or default.
+ */
+export function getStoredTickerBroadcast(): TickerBroadcastConfig {
+  if (typeof window === 'undefined') return DEFAULT_TICKER_BROADCAST
+  try {
+    const raw = localStorage.getItem(LOCAL_TICKER_BROADCAST_KEY)
+    if (raw) {
+      return { ...DEFAULT_TICKER_BROADCAST, ...JSON.parse(raw) }
+    }
+  } catch {
+    // fallback
+  }
+  return DEFAULT_TICKER_BROADCAST
+}
+
+/**
+ * Save ticker broadcast settings to local storage and dispatch real-time change event.
+ */
+export function saveStoredTickerBroadcast(config: TickerBroadcastConfig): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    localStorage.setItem(LOCAL_TICKER_BROADCAST_KEY, JSON.stringify(config))
+    window.dispatchEvent(new CustomEvent(TICKER_CHANGE_EVENT, { detail: config }))
+    return true
+  } catch (err) {
+    console.error('Failed to save ticker broadcast:', err)
+    return false
+  }
+}
+
+/**
+ * Fetch composite live ticker items for all marquee tickers across the site.
+ */
+export async function fetchMarqueeTickerItems(): Promise<MarqueeTickerItem[]> {
+  const broadcast = getStoredTickerBroadcast()
+  let livePosts: SupabaseUpdate[] = []
+
+  try {
+    livePosts = await fetchUpdates()
+  } catch {
+    // fallback
+  }
+
+  const items: MarqueeTickerItem[] = []
+
+  // 1. If broadcast is enabled and mode is custom or hybrid, add the broadcast item
+  if (broadcast.enabled && (broadcast.mode === 'custom' || broadcast.mode === 'hybrid')) {
+    items.push({
+      id: 'broadcast-alert',
+      badge: broadcast.badge || 'FLIGHT OPS ALERT',
+      highlight: broadcast.highlight || '',
+      subtext: broadcast.subtext || broadcast.headline,
+      date: broadcast.date,
+      href: broadcast.href || '#join',
+    })
+  }
+
+  // 2. If mode is stream_updates or hybrid, include recent live dispatches
+  if (broadcast.enabled && (broadcast.mode === 'stream_updates' || broadcast.mode === 'hybrid')) {
+    livePosts.slice(0, 5).forEach((post, idx) => {
+      items.push({
+        id: post.id || `live-${idx}`,
+        badge: post.ticker_badge || 'LIVE MISSION UPDATE',
+        highlight: `DISPATCH 0${idx + 1}:`,
+        subtext: post.title,
+        date: post.created_at,
+        href: '#updates',
+      })
+    })
+  }
+
+  // Fallback if empty
+  if (items.length === 0) {
+    items.push({
+      id: 'default-alert',
+      badge: DEFAULT_TICKER_BROADCAST.badge,
+      highlight: DEFAULT_TICKER_BROADCAST.highlight,
+      subtext: DEFAULT_TICKER_BROADCAST.subtext,
+      date: DEFAULT_TICKER_BROADCAST.date,
+      href: DEFAULT_TICKER_BROADCAST.href,
+    })
+  }
+
+  return items
+}
+

@@ -25,102 +25,116 @@ export default function ProjectPageClient({
   initialNextProject = null,
 }: ProjectPageClientProps) {
   const { projectPageUi, projectDetails, projects } = siteData;
-  const [project, setProject] = useState<ProjectDetail | null>(initialProject);
+  const initialBase = initialProject || projectDetails[slug] || null;
+  const [project, setProject] = useState<ProjectDetail | null>(initialBase);
   const [nextProject, setNextProject] = useState<{
     slug: string;
     title: string;
     code: string;
     coverImageUrl: string;
   } | null>(initialNextProject);
-  const [loading, setLoading] = useState<boolean>(!initialProject);
+  const [loading, setLoading] = useState<boolean>(!initialBase);
 
   useEffect(() => {
-    // If we already have the curated project from server, check nextProject
-    if (initialProject) {
-      setProject(initialProject);
-      if (!initialNextProject) {
-        computeNextProject(initialProject.slug);
-      }
-      setLoading(false);
-      return;
-    }
-
-    // Check if static projectDetails has it
-    if (projectDetails[slug]) {
-      const p = projectDetails[slug];
-      setProject(p);
-      computeNextProject(p.slug);
-      setLoading(false);
-      return;
-    }
-
-    // Otherwise, attempt client-side / Supabase / local storage lookup
     let isMounted = true;
+    const baseProject = initialProject || projectDetails[slug] || null;
+
+    if (baseProject && !initialNextProject) {
+      computeNextProject(baseProject.slug);
+    }
+
+    // Always fetch remote/local cache so live weekly updates and admin edits apply
     fetchProjectBySlug(slug)
       .then((remote) => {
         if (!isMounted) return;
         if (remote) {
-          const dynamicProject: ProjectDetail = {
-            slug: remote.slug || slug,
-            code: `BUILD // ${remote.slug?.toUpperCase() || "CADRE"}`,
-            title: remote.title,
-            subtitle: remote.summary || "Autonomous Aerial Systems Engineering Initiative",
-            status: (remote.status || "active").toUpperCase(),
-            trlLevel: "TRL-6 // LAB PROTOTYPE",
-            category: "Autonomous Aerospace & Robotics Build",
-            partner: "IIST Pegasus UAV Club // Dept. of Space",
-            leadDivision: "Flight Autonomy & Avionics Cadre",
-            summary: remote.summary || remote.description,
-            overview: remote.description
-              ? remote.description.split("\n\n").filter(Boolean)
-              : [remote.summary],
-            coverImageUrl: remote.cover_image_url || "",
-            telemetryStats: [
-              {
-                label: "Deployment Phase",
-                value: remote.status?.toUpperCase() || "ACTIVE",
-                detail: "Current operational readiness tier",
-              },
-              {
-                label: "Subsystems Integrated",
-                value: `${remote.stack?.length || 4}`,
-                unit: "Modules",
-                detail: "Embedded sensors & controllers",
-              },
-              {
-                label: "Repository Telemetry",
-                value: "LIVE",
-                detail: "Synchronized with Supabase cadre database",
-              },
-            ],
-            avionicsArchitecture: (remote.stack || []).map((tech, i) => ({
-              subsystem: `Subsystem 0${i + 1}`,
-              component: tech,
-              model: "Custom Payload / Hardware Module",
-              notes: "Integrated with flight controller and telemetry link.",
-            })),
-            missionObjectives: [
-              {
-                id: "OBJ-01",
-                title: "Autonomous Mission Execution",
-                description: remote.description || remote.summary,
-                division: "Autonomous Systems",
-              },
-            ],
-            flightLogs: [
-              {
-                phase: "Project Inception & Assembly",
-                date: remote.created_at
-                  ? new Date(remote.created_at).toLocaleDateString()
-                  : "2026 Cadre",
-                status: "VERIFIED",
-                outcome: "Recorded in active Pegasus projects roster.",
-              },
-            ],
-            stack: remote.stack || [],
-          };
-          setProject(dynamicProject);
-          computeNextProject(dynamicProject.slug);
+          if (baseProject) {
+            setProject((prev) => {
+              const current = prev || baseProject;
+              return {
+                ...current,
+                title: remote.title || current.title,
+                status: (remote.status || current.status).toUpperCase(),
+                summary: remote.summary || current.summary,
+                overview: remote.description
+                  ? remote.description.split("\n\n").filter(Boolean)
+                  : current.overview,
+                coverImageUrl: remote.cover_image_url || current.coverImageUrl,
+                stack:
+                  remote.stack && remote.stack.length > 0
+                    ? remote.stack
+                    : current.stack,
+                weeklyUpdates:
+                  remote.weekly_updates && remote.weekly_updates.length > 0
+                    ? remote.weekly_updates
+                    : current.weeklyUpdates,
+              };
+            });
+          } else {
+            const dynamicProject: ProjectDetail = {
+              slug: remote.slug || slug,
+              code: `BUILD // ${remote.slug?.toUpperCase() || "CADRE"}`,
+              title: remote.title,
+              subtitle:
+                remote.summary || "Autonomous Aerial Systems Engineering Initiative",
+              status: (remote.status || "active").toUpperCase(),
+              trlLevel: "TRL-6 // LAB PROTOTYPE",
+              category: "Autonomous Aerospace & Robotics Build",
+              partner: "IIST Pegasus UAV Club // Dept. of Space",
+              leadDivision: "Flight Autonomy & Avionics Cadre",
+              summary: remote.summary || remote.description,
+              overview: remote.description
+                ? remote.description.split("\n\n").filter(Boolean)
+                : [remote.summary],
+              coverImageUrl: remote.cover_image_url || "",
+              telemetryStats: [
+                {
+                  label: "Deployment Phase",
+                  value: remote.status?.toUpperCase() || "ACTIVE",
+                  detail: "Current operational readiness tier",
+                },
+                {
+                  label: "Subsystems Integrated",
+                  value: `${remote.stack?.length || 4}`,
+                  unit: "Modules",
+                  detail: "Embedded sensors & controllers",
+                },
+                {
+                  label: "Repository Telemetry",
+                  value: "LIVE",
+                  detail: "Synchronized with Supabase cadre database",
+                },
+              ],
+              avionicsArchitecture: (remote.stack || []).map((tech, i) => ({
+                subsystem: `Subsystem 0${i + 1}`,
+                component: tech,
+                model: "Custom Payload / Hardware Module",
+                notes: "Integrated with flight controller and telemetry link.",
+              })),
+              missionObjectives: [
+                {
+                  id: "OBJ-01",
+                  title: "Autonomous Mission Execution",
+                  description: remote.description || remote.summary,
+                  division: "Autonomous Systems",
+                },
+              ],
+              flightLogs: [
+                {
+                  phase: "Project Inception & Assembly",
+                  date: remote.created_at
+                    ? new Date(remote.created_at).toLocaleDateString()
+                    : "2026 Cadre",
+                  status: "VERIFIED",
+                  outcome: "Recorded in active Pegasus projects roster.",
+                },
+              ],
+              weeklyUpdates: remote.weekly_updates || undefined,
+              stack: remote.stack || [],
+            };
+            setProject(dynamicProject);
+            computeNextProject(dynamicProject.slug);
+          }
         }
         setLoading(false);
       })

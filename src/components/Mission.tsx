@@ -2,6 +2,7 @@
 
 import React, { useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import gsap, { ScrollTrigger } from "@/lib/gsap";
 import { siteData } from "@/data/data";
@@ -92,27 +93,48 @@ export default function Mission() {
           </div>
         </div>
 
-        {/* Symmetrical 2-Column Grid: Image & Justified Text (Clean & Borderless) */}
-        <div ref={contentRef} className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 mb-24 items-start">
-          {/* Symmetrical Left Column: IIST Campus Imagery */}
-          <div className="flex flex-col">
-            <div className="relative w-full aspect-[4/3] overflow-hidden bg-neutral-950">
+        {/* Symmetrical 2-Column Grid: Image & Justified Text */}
+        <div ref={contentRef} className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 mb-20 items-start">
+          {/* Symmetrical Left Column: Pegasus Imagery & Parent Institution Card */}
+          <div className="flex flex-col gap-6">
+            <div className="relative w-full aspect-[4/3] overflow-hidden bg-neutral-950 border border-white/15">
               <Image
                 src={mission.campusImageUrl}
                 alt={mission.campusCaption}
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-cover transition-transform duration-700 ease-out hover:scale-105"
+                className="object-contain p-8 transition-transform duration-700 ease-out hover:scale-105"
                 priority
               />
             </div>
-            <div className="flex items-center justify-between font-mono text-[11px] text-neutral-400 mt-3">
+            <div className="flex items-center justify-between font-mono text-[11px] text-neutral-400">
               <span className="truncate">{mission.campusCaption}</span>
               <span className="text-[#e2f952] shrink-0 ml-2">{mission.campusTag}</span>
             </div>
+
+            {/* Parent Institution Card linking to /about-iist */}
+            <div className="p-6 border border-white/15 bg-neutral-950/80 relative group hover:border-[#e2f952] transition-colors">
+              <div className="flex items-center justify-between mb-2 font-mono text-[10px] text-neutral-500 uppercase tracking-widest">
+                <span>[ {mission.iistCardTitle} ]</span>
+                <span className="text-[#e2f952]">ISRO COLLABORATION</span>
+              </div>
+              <h4 className="text-lg font-bold text-white uppercase tracking-tight mb-2">
+                {mission.iistCardSubtitle}
+              </h4>
+              <p className="text-xs text-neutral-400 leading-relaxed font-normal mb-4">
+                {mission.iistCardDescription}
+              </p>
+              <Link
+                href={mission.iistCardHref}
+                className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-[#e2f952] hover:underline font-semibold"
+              >
+                <span>{mission.iistCardCta}</span>
+                <span>↗</span>
+              </Link>
+            </div>
           </div>
 
-          {/* Symmetrical Right Column: Vision & About Texts (Justified) */}
+          {/* Symmetrical Right Column: Vision & About Pegasus Texts */}
           <div className="flex flex-col justify-between h-full gap-8">
             {/* Vision Block */}
             <div>
@@ -124,65 +146,25 @@ export default function Mission() {
               </p>
             </div>
 
-            {/* About IIST Block */}
+            {/* About PEGASUS Block */}
             <div>
-              <span className="font-mono text-xs uppercase tracking-widest text-neutral-400 block mb-3">
+              <span className="font-mono text-xs uppercase tracking-widest text-[#e2f952] block mb-3">
                 // {mission.aboutTitle}
               </span>
-              <p className="text-sm md:text-base text-neutral-400 leading-relaxed font-normal text-justify hyphens-auto">
+              <p className="text-sm md:text-base text-neutral-300 leading-relaxed font-normal text-justify hyphens-auto">
                 {mission.aboutText}
               </p>
             </div>
+
+            {/* Mini Telemetry Highlights */}
+
           </div>
         </div>
 
         {/* Stark Border-Separated 4-Column Feature Grid (Brutalist Tables) */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <span className="font-mono text-xs uppercase tracking-widest text-neutral-400">
-              [ CORE CAPABILITIES & DOMAINS ]
-            </span>
-            <span className="font-mono text-xs text-[#e2f952]">
-              {mission.features.length} ACTIVE MODULES
-            </span>
-          </div>
 
-          <div
-            ref={featuresRef}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 border border-white/20 divide-y md:divide-y-0 md:divide-x divide-white/20 bg-white/[0.01]"
-          >
-            {mission.features.map((feat, index) => (
-              <div
-                key={feat.id}
-                className="feature-card p-6 md:p-8 flex flex-col justify-between group hover:bg-white/[0.04] transition-colors relative"
-              >
-                {/* Corner crosshairs marker */}
-                <div className="font-mono text-[10px] text-neutral-600 absolute top-2 right-3 group-hover:text-[#e2f952] transition-colors">
-                  +
-                </div>
-
-                <div>
-                  <div className="flex items-baseline justify-between mb-6">
-                    <span className="font-mono text-sm font-bold text-[#e2f952] tracking-wider px-2 py-0.5 border border-[#e2f952]/40 bg-[#e2f952]/5">
-                      {feat.id}
-                    </span>
-                    <span className="font-mono text-xs text-neutral-600">
-                      [ 0{index + 1} ]
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-bold uppercase tracking-tight text-white mb-3 group-hover:text-[#e2f952] transition-colors">
-                    {feat.title}
-                  </h3>
-                </div>
-
-                <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed font-normal mt-6 border-t border-white/10 pt-4">
-                  {feat.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </section>
   );
 }
+

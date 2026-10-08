@@ -10,11 +10,6 @@ export default function Footer() {
   const pathname = usePathname() || "/";
   const isSubpage = pathname !== "/";
 
-  const getHref = (link: string) => {
-    const anchor = link.toLowerCase().replace(/\s+/g, "-");
-    return isSubpage ? `/#${anchor}` : `#${anchor}`;
-  };
-
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -53,14 +48,14 @@ export default function Footer() {
                 [ INDEX ]
               </div>
               <ul className="flex flex-col gap-2.5 font-mono text-xs uppercase text-neutral-400">
-                {header.navLinks.slice(0, 4).map((link) => (
-                  <li key={link}>
-                    <a
-                      href={getHref(link)}
+                {header.navLinks.slice(0, 3).map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
                       className="hover:text-white transition-colors hover:translate-x-1 inline-block"
                     >
-                      {link}
-                    </a>
+                      {item.label}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -68,17 +63,17 @@ export default function Footer() {
 
             <div>
               <div className="font-mono text-xs uppercase tracking-widest text-neutral-500 mb-4">
-                [ NETWORK ]
+                [ DIRECTORY ]
               </div>
               <ul className="flex flex-col gap-2.5 font-mono text-xs uppercase text-neutral-400">
-                {header.navLinks.slice(4).map((link) => (
-                  <li key={link}>
-                    <a
-                      href={getHref(link)}
+                {header.navLinks.slice(3).map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
                       className="hover:text-white transition-colors hover:translate-x-1 inline-block"
                     >
-                      {link}
-                    </a>
+                      {item.label}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -93,8 +88,26 @@ export default function Footer() {
                 <div>AVIONICS: NOMINAL</div>
                 <div>AUTONOMY: READY</div>
                 <Link
-                  href="/constitution"
+                  href="/about-iist"
                   className="mt-2 text-left text-neutral-400 underline hover:text-[#e2f952] transition-colors"
+                >
+                  [ ABOUT IIST (SPACE UNIV) → ]
+                </Link>
+                <Link
+                  href="/team"
+                  className="mt-1 text-left text-neutral-400 underline hover:text-[#e2f952] transition-colors"
+                >
+                  [ CADRE PERSONNEL ROSTER → ]
+                </Link>
+                <Link
+                  href="/request-hardware"
+                  className="mt-1 text-left text-neutral-400 underline hover:text-[#e2f952] transition-colors"
+                >
+                  [ HARDWARE REQUISITION → ]
+                </Link>
+                <Link
+                  href="/constitution"
+                  className="mt-1 text-left text-neutral-400 underline hover:text-[#e2f952] transition-colors"
                 >
                   [ CONSTITUTION & CHARTER → ]
                 </Link>

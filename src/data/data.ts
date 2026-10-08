@@ -53,6 +53,20 @@ export interface ProjectGalleryItem {
     tag: string;
 }
 
+export type WeeklyUpdateStatus = "COMPLETED" | "IN_PROGRESS" | "TESTING" | "PLANNED" | "BLOCKED";
+
+export interface ProjectWeeklyDetail {
+    id: string;
+    weekNumber: string; // e.g. "Week 04" or "Week 1"
+    dateRange: string;  // e.g. "Oct 01 - Oct 07, 2026"
+    title: string;      // e.g. "Autonomous Waypoint Navigation & Obstacle Avoidance Validation"
+    summary: string;    // Comprehensive narrative of goals and technical achievements
+    status: WeeklyUpdateStatus;
+    highlights?: string[]; // Bullet milestones / accomplishments
+    flightHoursOrTests?: string; // e.g. "5 sorties · 2.4 hrs logged"
+    blockersOrRisks?: string;   // e.g. "Resolved vibration drift with silicone mounts"
+}
+
 export interface ProjectDetail {
     slug: string;
     code: string;
@@ -71,6 +85,7 @@ export interface ProjectDetail {
     avionicsArchitecture: ProjectAvionicsSpec[];
     missionObjectives: ProjectObjective[];
     flightLogs: ProjectFlightLog[];
+    weeklyUpdates?: ProjectWeeklyDetail[];
     stack: string[];
 }
 
@@ -100,6 +115,18 @@ export interface ProjectPageUi {
     notFoundTitle: string;
     notFoundMessage: string;
     returnHomeButton: string;
+    weeklySectionNumber: string;
+    weeklyHeadline: string;
+    weeklyDescription: string;
+    weeklyBadge: string;
+    weeklyEmptyMessage: string;
+    weeklyFilterAll: string;
+    weeklyStatusPrefix: string;
+    weeklyMilestonesLabel: string;
+    weeklyTelemetryLabel: string;
+    weeklyBlockersLabel: string;
+    weeklyTotalWeeksLabel: string;
+    weeklyLatestSprintLabel: string;
 }
 
 export interface TeamMember {
@@ -201,6 +228,87 @@ export interface NavbarTickerData {
     href: string;
 }
 
+export interface AboutIistDepartment {
+    code: string;
+    title: string;
+    desc: string;
+}
+
+export interface AboutIistFacility {
+    name: string;
+    role: string;
+}
+
+export interface AboutIistIsroCenter {
+    name: string;
+    full: string;
+    city: string;
+    focus: string;
+}
+
+export interface AboutIistData {
+    sectionNumber: string;
+    badge: string;
+    headline: string;
+    subheadline: string;
+    campusTag: string;
+    campusImageUrl: string;
+    campusCaption: string;
+    genesisTitle: string;
+    genesisText: string;
+    isroSynergyTitle: string;
+    isroSynergyText: string;
+    pegasusTiesTitle: string;
+    pegasusTiesText: string;
+    stats: Stat[];
+    departments: AboutIistDepartment[];
+    facilities: AboutIistFacility[];
+    isroCenters: AboutIistIsroCenter[];
+    returnCta: string;
+    returnHref: string;
+    charterCta: string;
+    charterHref: string;
+}
+
+export interface HeaderNavLink {
+    label: string;
+    href: string;
+    code: string;
+}
+
+export interface TeamCadreWing {
+    code: string;
+    title: string;
+    role: string;
+    description: string;
+}
+
+export interface TeamPageUi {
+    sectionNumber: string;
+    headline: string;
+    subheadline: string;
+    telemetryCode: string;
+    description: string;
+    searchPlaceholder: string;
+    filterAll: string;
+    backToFlightOps: string;
+    recruitmentPrompt: string;
+    recruitmentCta: string;
+    recruitmentHref: string;
+    loadingTelemetry: string;
+    errorTelemetry: string;
+    emptySearchState: string;
+    emptyRecordsState: string;
+    activeStatus: string;
+    verifiedBadge: string;
+    cadreBadge: string;
+    operativeLabel: string;
+    operativesLabel: string;
+    directoryCode: string;
+    statsTotalLabel: string;
+    statsCadresLabel: string;
+}
+
 export const siteData = {
     navbarTicker: {
         badge: "FLIGHT OPS ALERT",
@@ -210,17 +318,29 @@ export const siteData = {
         date: "10th - 11th October",
         href: "#join",
     },
+    marquee: {
+        defaultText: "INNOVATE. BUILD. FLY.",
+        secondaryText: "AUTONOMY AT ALTITUDE",
+        cadreText: "PEGASUS UAV CLUB · IIST",
+        dispatchesPrefix: "LIVE CADRE DISPATCH:",
+    },
     header: {
         title: "PEGASUS UAV Club · IIST",
         logoUrl: "/pegasus-logo.png",
-        navLinks: ["About", "Projects", "Team", "Mentors", "Request Inventory", "Join Us"],
+        navLinks: [
+            { label: "About IIST", href: "/about-iist", code: "01" },
+            { label: "Projects", href: "/projects", code: "02" },
+            { label: "Mentors", href: "/#mentors", code: "03" },
+            { label: "Request Hardware", href: "/request-hardware", code: "04" },
+            { label: "Join Us", href: "/#join-us", code: "05" },
+        ] as HeaderNavLink[],
         tickerText: "ORION- Drone hackathon from 10th - 11th October",
     },
     hero: {
         eyebrow: "Indian Institute of Space Science and Technology",
         headline: "Autonomy at Altitude",
         description: "Pegasus builds unmanned aerial systems that navigate, decide, and land safely — without GPS, without a pilot, without compromise.",
-        primaryCta: { label: "Explore Projects", href: "#projects" },
+        primaryCta: { label: "Explore Projects", href: "/projects" },
         secondaryCta: { label: "Join the Club", href: "#join" },
         videoUrl: "https://boqqnkwveliwzpxqzaha.supabase.co/storage/v1/object/public/media/hero/98082368-b44a-496a-9b86-0947871c0cb6-14623-685293399.mp4",
         stats: [
@@ -230,18 +350,23 @@ export const siteData = {
         ] as Stat[],
     },
     mission: {
-        sectionNumber: "01 -- Mission",
+        sectionNumber: "01 -- Mission & Cadre",
         headline: "Innovate. Build. Fly.",
-        subtitle: "Department of Space · Govt. of India",
-        institutionTag: "Asia's First Space University · Thiruvananthapuram",
-        divisionCode: "IIST // AERO_RESEARCH_DIV",
-        visionTitle: "Vision",
-        visionText: "To revolutionize the application of autonomous aerial systems across research, governance, and space technology, establishing IIST as a global leader in multidisciplinary UAV development.",
-        aboutTitle: "About IIST",
-        aboutText: "The Indian Institute of Space Science and Technology (IIST), located in Thiruvananthapuram, is Asia’s first space university.  By maintaining deep, integrated ties with the Indian Space Research Organisation (ISRO), the institute fosters an unparalleled ecosystem where rigorous academic theory meets the high-stakes, applied engineering demands of advanced aerospace, avionics, and deep-tech innovation.",
-        campusImageUrl: "/iist-campus.jpg",
-        campusTag: "IIST VALIAMALA CAMPUS // 8.6277°N, 77.0379°E",
-        campusCaption: "Aerial Perspective · Indian Institute of Space Science and Technology",
+        subtitle: "Prototyping & Engineering for Geoinformatics, Aerial Systems, and Unified Solutions",
+        institutionTag: "IIST Valiamala · Thiruvananthapuram",
+        divisionCode: "PEGASUS // UAV_AUTONOMY_LAB",
+        visionTitle: "Cadre Vision",
+        visionText: "To revolutionize sovereign, GPS-denied autonomous aerial robotics across defense reconnaissance, agriculture, and high-altitude payload operations — establishing IIST as a premier national powerhouse for multidisciplinary unmanned aviation.",
+        aboutTitle: "About PEGASUS UAV Club",
+        aboutText: "Prototyping and Engineering for Geoinformatics, Aerial Systems, and Unified Solutions (PEGASUS) is the premier autonomous aerial robotics and UAV development club at the Indian Institute of Space Science and Technology (IIST). Founded to bridge theoretical aerospace science with rigorous field engineering, Pegasus designs and fabricates indigenous UAVs engineered for extreme GPS-denied environments, agricultural autonomy, and tactical defense reconnaissance. Our student cadre spans aerodynamics, embedded avionics, computer vision, and ROS2-based autonomy pipelines.",
+        campusImageUrl: "/pegasus-logo-full.png",
+        campusTag: "PEGASUS AVIONICS LAB // IIST VALIAMALA",
+        campusCaption: "Autonomous Flight Systems & Multi-Rotor Airframes · IIST Avionics Bay",
+        iistCardTitle: "Parent Academic Institution",
+        iistCardSubtitle: "Asia's First Space University · Department of Space, Govt. of India",
+        iistCardDescription: "Operating from IIST's Valiamala campus under direct ISRO research synergy and faculty mentorship.",
+        iistCardCta: "Explore Full Institution Profile: About IIST →",
+        iistCardHref: "/about-iist",
         features: [
             { id: "NAV", title: "GPS-Denied Navigation", description: "Visual-inertial odometry and SLAM pipelines that keep a drone oriented when satellite signal drops out entirely." },
             { id: "SAFE", title: "Failsafe Systems", description: "Emergency landing logic that reads terrain in real time and chooses a safe touchdown zone autonomously." },
@@ -249,6 +374,49 @@ export const siteData = {
             { id: "NET", title: "Alumni & Industry Network", description: "Direct lines into India's space and defense sector through IIST's own graduating cohorts." },
         ] as Feature[],
     },
+    aboutIist: {
+        sectionNumber: "00 -- Parent Space University",
+        badge: "ASIA'S FIRST SPACE UNIVERSITY // DEPT. OF SPACE · GOVT. OF INDIA",
+        headline: "Indian Institute of Space Science & Technology",
+        subheadline: "Premier National Institute for Space Education & High-Altitude Research · Thiruvananthapuram",
+        campusTag: "VALIAMALA CAMPUS // 8.6277° N, 77.0379° E",
+        campusImageUrl: "/iist-campus.jpg",
+        campusCaption: "Aerial Perspective · IIST Valiamala Campus in the foothills of Ponmudi, Western Ghats",
+        genesisTitle: "Genesis & Foundational Vision",
+        genesisText: "Inaugurated on September 14, 2007 by Dr. G. Madhavan Nair and deeply championed by the visionary former President of India, Dr. A.P.J. Abdul Kalam, IIST was established by the Indian Space Research Organisation (ISRO) under the Department of Space, Government of India. Operating as Asia's very first university dedicated entirely to space science, technology, and applications, IIST serves as the direct incubator for elite engineers who drive India's sovereign satellite programs, launch vehicles, and deep-space missions.",
+        isroSynergyTitle: "Deep Integration with ISRO Mission Control",
+        isroSynergyText: "Located in immediate proximity to the Liquid Propulsion Systems Centre (LPSC) in Valiamala and moments away from the Vikram Sarabhai Space Centre (VSSC) in Thiruvananthapuram, IIST maintains a fully integrated ecosystem where rigorous academic theory immediately interfaces with high-stakes aerospace engineering. Students and faculty work directly on active spaceflight payloads, hypersonic aerodynamics, cryogenic modeling, and cutting-edge autonomous guidance systems.",
+        pegasusTiesTitle: "Parentage of PEGASUS UAV Club",
+        pegasusTiesText: "PEGASUS UAV Club functions as the official autonomous aerial systems cadre of IIST, supported by the Department of Avionics and Department of Aerospace Engineering. Through institute prototyping facilities, flight corridors, and telemetry labs, student engineers translate space-grade GNC algorithms into agile unmanned aerial platforms.",
+        stats: [
+            { label: "Established", value: "2007" },
+            { label: "Partner", value: "ISRO / DOS" },
+            { label: "Location", value: "Valiamala, Kerala" },
+            { label: "Coordinates", value: "8.6277°N, 77.0379°E" },
+        ] as Stat[],
+        departments: [
+            { code: "AERO", title: "Aerospace Engineering", desc: "Aerodynamics, flight mechanics, structural dynamics, solid & liquid propulsion, and atmospheric reentry systems." },
+            { code: "AVIO", title: "Avionics Engineering", desc: "Guidance Navigation & Control (GNC), digital communication, radar systems, power electronics, and autonomous flight computers." },
+            { code: "ESS", title: "Earth & Space Sciences", desc: "Atmospheric and planetary science, astronomy & astrophysics, remote sensing, GIS, and geoinformatics." },
+        ],
+        facilities: [
+            { name: "Advanced Propulsion Laboratory", role: "Rocket engine diagnostics and motor test bays" },
+            { name: "Guidance & Navigation Cleanroom", role: "Inertial measurement unit calibration and RTK-GNSS test rigs" },
+            { name: "Subsonic Wind Tunnel Complex", role: "Aerodynamic lift, drag, and boundary-layer profiling" },
+            { name: "Satellite Telemetry Ground Station", role: "UHF/VHF tracking arrays for orbital communication" },
+        ],
+        isroCenters: [
+            { name: "VSSC", full: "Vikram Sarabhai Space Centre", city: "Thiruvananthapuram", focus: "Launch Vehicle Design, Solid Motors & Composites" },
+            { name: "LPSC", full: "Liquid Propulsion Systems Centre", city: "Valiamala", focus: "Liquid & Cryogenic Rocket Stages" },
+            { name: "IISU", full: "ISRO Inertial Systems Unit", city: "Vattiyoorkavu", focus: "Inertial Guidance, Gyros & Actuators" },
+            { name: "URSC", full: "U R Rao Satellite Centre", city: "Bengaluru", focus: "Satellite Bus Systems & Orbit Payloads" },
+            { name: "SAC", full: "Space Applications Centre", city: "Ahmedabad", focus: "Earth Observation & Planetary Telemetry" },
+        ],
+        returnCta: "RETURN TO PEGASUS FLIGHT OPS",
+        returnHref: "/",
+        charterCta: "EXPLORE CLUB CONSTITUTION & CHARTER",
+        charterHref: "/constitution",
+    } as AboutIistData,
     projects: {
         sectionNumber: "02 -- Research",
         headline: "Active Projects",
@@ -297,6 +465,18 @@ export const siteData = {
         notFoundTitle: "PROJECT TELEMETRY NOT FOUND",
         notFoundMessage: "The requested project identifier is not active in the Pegasus research hangar or database.",
         returnHomeButton: "RETURN TO FLIGHT OPS",
+        weeklySectionNumber: "05 -- Weekly Cadence",
+        weeklyHeadline: "Weekly Sprint & Engineering Dispatches",
+        weeklyDescription: "Chronological weekly build progression, laboratory trial phases, and subsystem testing telemetry.",
+        weeklyBadge: "SPRINT TELEMETRY",
+        weeklyEmptyMessage: "NO WEEKLY SPRINT DISPATCHES RECORDED FOR THIS BUILD YET.",
+        weeklyFilterAll: "ALL SPRINT WEEKS",
+        weeklyStatusPrefix: "CADENCE STATUS",
+        weeklyMilestonesLabel: "KEY MILESTONES & SUBSYSTEM DELIVERABLES",
+        weeklyTelemetryLabel: "FLIGHT TESTING & TELEMETRY LOGS",
+        weeklyBlockersLabel: "ROADBLOCK RESOLUTION & RISK MITIGATION",
+        weeklyTotalWeeksLabel: "SPRINT WEEKS",
+        weeklyLatestSprintLabel: "LATEST SPRINT",
     } as ProjectPageUi,
     projectDetails: {
         "flying-wings": {
@@ -343,6 +523,66 @@ export const siteData = {
                 { phase: "GPS-Denied Optical Lock Trial", date: "August 2026", status: "VALIDATED", outcome: "Achieved continuous 15-minute stable hover inside IIST Avionics Hangar with < 5cm drift." },
                 { phase: "Autonomous Waypoint Mission", date: "September 2026", status: "SUCCESS", outcome: "Navigated 8 indoor checkpoints autonomously with obstacle avoidance in under 3 minutes." },
                 { phase: "Field Demonstration Simulation", date: "Upcoming", status: "SCHEDULED", outcome: "Full-scale tactical deployment evaluation at defense test grounds." },
+            ],
+            weeklyUpdates: [
+                {
+                    id: "fw-week-04",
+                    weekNumber: "Week 04",
+                    dateRange: "Oct 01 - Oct 07, 2026",
+                    title: "Autonomous Waypoint Navigation & Obstacle Avoidance Validation",
+                    summary: "Successfully conducted multi-waypoint autonomous flight testing inside the simulated indoor avionics hangar. The Jetson Orin Nano processed real-time 3D depth point clouds to dodge simulated obstacles while maintaining zero-GPS position hold.",
+                    status: "COMPLETED",
+                    highlights: [
+                        "Configured ArduPilot 4.5.1 EKF3 filters for optical flow and RealSense VIO fusion",
+                        "Completed 8 autonomous waypoint transits with zero operator intervention",
+                        "Benchmarked edge TensorRT object detection latency at 18ms per frame"
+                    ],
+                    flightHoursOrTests: "5 sorties · 2.4 flight hours logged",
+                    blockersOrRisks: "Solved vibration-induced drift by upgrading to silicone gel isolator mounts."
+                },
+                {
+                    id: "fw-week-03",
+                    weekNumber: "Week 03",
+                    dateRange: "Sep 24 - Sep 30, 2026",
+                    title: "Stereo VIO Sensor Calibration & Precision Hover Trials",
+                    summary: "Integrated Intel RealSense D435i camera with downward TFmini LiDAR. Conducted 15-minute uninterrupted hover runs in the Avionics Bay to calibrate visual odometry scale factors.",
+                    status: "COMPLETED",
+                    highlights: [
+                        "Calibrated dual IMU vibration dampeners across 40% to 80% throttle range",
+                        "Achieved sub-5cm radial drift in GPS-denied indoor flight corridor",
+                        "Validated downward LiDAR ranging accuracy over varied floor textures"
+                    ],
+                    flightHoursOrTests: "6 hover trials · 1.8 flight hours logged",
+                    blockersOrRisks: "Replaced noisy power rail BEC with isolated filtered 5V supply."
+                },
+                {
+                    id: "fw-week-02",
+                    weekNumber: "Week 02",
+                    dateRange: "Sep 17 - Sep 23, 2026",
+                    title: "RF Evasion Protocol & Low-Observability Telemetry Testing",
+                    summary: "Designed and tested burst telemetry protocols over ExpressLRS 2.4GHz to minimize electronic signature. Implemented fail-safe Return-to-Home routines on communication disruption.",
+                    status: "COMPLETED",
+                    highlights: [
+                        "Bench-tested RF emission suppression during autonomous cruise mode",
+                        "Programmed emergency land routines using real-time terrain depth maps",
+                        "Tested dual diversity telemetry antenna placement for line-of-sight propagation"
+                    ],
+                    flightHoursOrTests: "4 RF range tests conducted"
+                },
+                {
+                    id: "fw-week-01",
+                    weekNumber: "Week 01",
+                    dateRange: "Sep 10 - Sep 16, 2026",
+                    title: "Carbon Monocoque Airframe Rigging & Propulsion Bench Analysis",
+                    summary: "Assembled custom Toray 3K carbon fiber monocoque frame. Paired T-Motor F40 Pro IV motors with Tekko32 ESCs on thrust stand to evaluate power efficiency and thermal dissipation.",
+                    status: "COMPLETED",
+                    highlights: [
+                        "Verified 4:1 thrust-to-weight ratio with 1850g all-up target weight",
+                        "Constructed custom PCB power distribution board with CAN-bus rails",
+                        "Conducted structural drop testing and arm flex strain analysis"
+                    ],
+                    flightHoursOrTests: "12 bench dynamometer thrust runs"
+                }
             ],
             stack: ["Pixhawk 6C", "Jetson Orin Nano", "ArduPilot EKF3", "ROS2 Humble", "Intel RealSense D435i", "TensorRT", "LiDAR"],
         },
@@ -391,15 +631,116 @@ export const siteData = {
                 { phase: "Actuator Soil Insertion Trials", date: "August 2026", status: "SUCCESS", outcome: "Successfully performed 12 automated rod insertions into simulated waterlogged paddy soil." },
                 { phase: "Paddy Field Environmental Deployment", date: "Upcoming", status: "ACTIVE", outcome: "Deploying prototype for live field data collection across partner research plots." },
             ],
+            weeklyUpdates: [
+                {
+                    id: "ag-week-04",
+                    weekNumber: "Week 04",
+                    dateRange: "Oct 01 - Oct 07, 2026",
+                    title: "Soil Probe Insertion Mechanism Field Calibration",
+                    summary: "Mounted CNC linear drive actuator and calibrated HX711 load cell feedback during automated soil probe penetrations in simulated wet clay terrain at IIST campus test plots.",
+                    status: "COMPLETED",
+                    highlights: [
+                        "Programmed automatic thrust compensation to counteract 180N ground reaction force",
+                        "Validated automated probe depth detection with sub-centimeter repeatability",
+                        "Integrated analog soil moisture and salinity sensor telemetry into QGroundControl"
+                    ],
+                    flightHoursOrTests: "8 insertion trials · 1.5 flight hours logged",
+                    blockersOrRisks: "Fine-tuned stepper current limits to prevent motor stall in rocky subsoil."
+                },
+                {
+                    id: "ag-week-03",
+                    weekNumber: "Week 03",
+                    dateRange: "Sep 24 - Sep 30, 2026",
+                    title: "Centimeter Dual RTK-GNSS Rover-Base Station Integration",
+                    summary: "Paired Holybro H-RTK F9P helical rover with stationary base station. Achieved stable RTK Fixed lock under dense tree canopy and simulated agricultural boundary conditions.",
+                    status: "COMPLETED",
+                    highlights: [
+                        "Demonstrated ±1.5cm stationary hover position hold in 12-knot crosswinds",
+                        "Configured u-blox ZED-F9P RTCM3 data link over RFD900x telemetry",
+                        "Mapped 5-acre agricultural plot using automated grid waypoint planner"
+                    ],
+                    flightHoursOrTests: "4 RTK mapping flights · 2.1 flight hours",
+                    blockersOrRisks: "Eliminated multipath interference by elevating base station antenna mast."
+                },
+                {
+                    id: "ag-week-02",
+                    weekNumber: "Week 02",
+                    dateRange: "Sep 17 - Sep 23, 2026",
+                    title: "Heavy-Lift Thrust & 5.5kg Payload Balancing",
+                    summary: "Installed dual 6S 16000mAh semi-solid LiPo power packs on the Tarot 650 hexacopter airframe. Tuned PX4 altitude control PID loops under varying dummy payload weights.",
+                    status: "COMPLETED",
+                    highlights: [
+                        "Achieved 22-minute hover endurance with full 5.5kg mechanical payload",
+                        "Optimized motor PWM frequency for reduced thermal buildup in heavy-lift ESCs",
+                        "Engineered quick-release carbon battery locking tray"
+                    ],
+                    flightHoursOrTests: "7 flight duration trials"
+                },
+                {
+                    id: "ag-week-01",
+                    weekNumber: "Week 01",
+                    dateRange: "Sep 10 - Sep 16, 2026",
+                    title: "Airframe Reinforcement & Actuator Mechanical Assembly",
+                    summary: "Reinforced folding arm joints of Tarot 650 frame with CNC aluminum clamps. Machined custom carbon fiber payload bay mounting bracket to house linear drive mechanism.",
+                    status: "COMPLETED",
+                    highlights: [
+                        "Designed and CNC-milled custom linear rod guide carriage",
+                        "Tested stress limits under simulated 200N vertical thrust reactions",
+                        "Installed isolated power rails for stepper motor drive to avoid avionics noise"
+                    ],
+                    flightHoursOrTests: "Structural stress testing nominal"
+                }
+            ],
             stack: ["Cube Orange+", "Holybro H-RTK F9P", "PX4 Autopilot", "Tarot 650 Carbon", "QGroundControl", "Linear Actuator", "Multispectral NIR"],
         },
     } as Record<string, ProjectDetail>,
     team: {
-        sectionNumber: "04 — Roster",
-        headline: "The Team",
+        sectionNumber: "04 — Cadre",
+        headline: "The Flight Cadre",
         subheadline: "Engineering & Leadership Cadre",
+        description: "Pegasus brings together an elite student cadre spanning flight controls, AI perception, avionics, aerodynamics, and project logistics at IIST.",
+        ctaLabel: "EXPLORE FULL CADRE ROSTER (ALL OPERATIVES) →",
+        ctaHref: "/team",
+        stats: [
+            { label: "Subsystems", value: "6" },
+            { label: "Active Cadre", value: "20+" },
+            { label: "Base", value: "IIST Valiamala" },
+        ] as Stat[],
+        cadreWings: [
+            { code: "EXEC", title: "Executive Command", role: "Flight Direction & Operations", description: "Project governance, mission strategy, inter-departmental synergy, and external aerospace partnerships." },
+            { code: "AVIO", title: "Avionics & Embedded", role: "Custom Flight Electronics", description: "Design of custom PCB power distribution, CAN-bus networks, telemetry radios, and fail-safe power rails." },
+            { code: "GNC", title: "Flight Controls & Autonomy", role: "GNC & Real-time State Estimation", description: "PX4 / ArduPilot control loops, visual-inertial SLAM, and GPS-denied precision autonomous navigation." },
+            { code: "PERC", title: "Computer Vision & Perception", role: "Edge AI & Target Acquisition", description: "Jetson companion compute pipelines for real-time terrain mapping, obstacle avoidance, and target tracking." },
+            { code: "AERO", title: "Aerodynamics & Airframe", role: "Structural Dynamics & Composites", description: "CFD optimization, carbon fiber airframe fabrication, and high-altitude payload stress testing." },
+            { code: "OPS", title: "Ground Station & Operations", role: "Telemetry & Field Validation", description: "QGroundControl command stations, real-time RF data links, field test safety protocols, and flight logs." },
+        ] as TeamCadreWing[],
         categories: [] as TeamCategory[],
     },
+    teamPage: {
+        sectionNumber: "04 — Cadre Roster",
+        headline: "The Team",
+        subheadline: "Engineering & Leadership Cadre",
+        telemetryCode: "CADRE // PERSONNEL-01",
+        description: "The student engineers, flight controllers, perception researchers, and subsystem leads advancing autonomous flight at IIST.",
+        searchPlaceholder: "FILTER OPERATIVES BY NAME, ROLE OR SUBSYSTEM...",
+        filterAll: "ALL CADRES",
+        backToFlightOps: "RETURN TO FLIGHT OPS",
+        recruitmentPrompt: "INTERESTED IN JOINING THE PEGASUS AUTONOMOUS CADRE?",
+        recruitmentCta: "APPLY FOR RECRUITMENT",
+        recruitmentHref: "/#join",
+        loadingTelemetry: "SYNCHRONIZING SUPABASE TELEMETRY // RETRIEVING PERSONNEL CADRE",
+        errorTelemetry: "Telemetry offline: Unable to load personnel roster from database.",
+        emptySearchState: "NO ACTIVE PERSONNEL RECORDS MATCHING FILTER CRITERIA",
+        emptyRecordsState: "NO ACTIVE PERSONNEL RECORDS FOUND IN SUPABASE",
+        activeStatus: "CADRE // ACTIVE",
+        verifiedBadge: "VERIFIED",
+        cadreBadge: "IIST UAV // CADRE",
+        operativeLabel: "OPERATIVE",
+        operativesLabel: "OPERATIVES",
+        directoryCode: "CADRE DIRECTORY // ALL MEMBERS & DESIGNATIONS",
+        statsTotalLabel: "ACTIVE CADRE",
+        statsCadresLabel: "DIVISIONS",
+    } as TeamPageUi,
     mentors: {
         sectionNumber: "05 — Council",
         headline: "Distinguished Mentors",

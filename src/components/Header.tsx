@@ -36,21 +36,24 @@ export default function Header() {
 
         {/* Desktop Navigation Links */}
         <nav className="hidden lg:flex items-center gap-6">
-          {header.navLinks.map((link, idx) => {
-            const anchor = `#${link.toLowerCase().replace(/\s+/g, "-")}`;
-            const href = isSubpage ? `/${anchor}` : anchor;
+          {header.navLinks.map((item) => {
+            const isActive = pathname === item.href;
             return (
-              <a
-                key={link}
-                href={href}
-                className="group relative font-mono text-xs uppercase tracking-widest text-neutral-400 hover:text-white py-1 transition-colors"
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`group relative font-mono text-xs uppercase tracking-widest py-1 transition-colors ${isActive ? "text-[#e2f952]" : "text-neutral-400 hover:text-white"
+                  }`}
               >
                 <span className="text-neutral-600 mr-1 text-[10px]">
-                  0{idx + 1}
+                  {item.code}
                 </span>
-                {link}
-                <span className="absolute bottom-0 left-0 w-0 h-[1px] bg-[#e2f952] transition-all duration-200 group-hover:w-full" />
-              </a>
+                {item.label}
+                <span
+                  className={`absolute bottom-0 left-0 h-[1px] bg-[#e2f952] transition-all duration-200 ${isActive ? "w-full" : "w-0 group-hover:w-full"
+                    }`}
+                />
+              </Link>
             );
           })}
         </nav>
@@ -63,19 +66,25 @@ export default function Header() {
               className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border border-[#e2f952]/60 bg-[#e2f952]/10 text-[#e2f952] hover:bg-[#e2f952] hover:text-black transition-all flex items-center gap-1.5"
             >
               <span>←</span>
-              <span>{pathname.includes("constitution") ? "RETURN TO FLIGHT OPS" : projectPageUi.backToHangar}</span>
+              <span>RETURN TO FLIGHT OPS</span>
             </Link>
           ) : (
             <div className="flex items-center gap-2.5">
+
+              <Link
+                href="/team"
+                className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border border-white/20 hover:border-[#e2f952] bg-white/5 hover:text-[#e2f952] text-neutral-300 transition-all flex items-center gap-1"
+              >
+                <span>[ CREW ↗ ]</span>
+              </Link>
+
               <Link
                 href="/constitution"
                 className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border border-white/20 hover:border-[#e2f952] bg-white/5 hover:text-[#e2f952] text-neutral-300 transition-all flex items-center gap-1"
               >
                 <span>[ CHARTER ↗ ]</span>
               </Link>
-              <div className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border border-white/20 bg-white/5 text-neutral-300">
-                [ LOC: IIST // LAT: 8.6°N ]
-              </div>
+
             </div>
           )}
         </div>
@@ -102,31 +111,23 @@ export default function Header() {
               onClick={() => setMobileMenuOpen(false)}
               className="font-mono text-sm tracking-widest uppercase text-[#e2f952] flex items-center justify-between border-b border-white/10 pb-2"
             >
-              <span>← {pathname.includes("constitution") ? "RETURN TO FLIGHT OPS" : projectPageUi.backToHangar}</span>
+              <span>← RETURN TO FLIGHT OPS</span>
               <span className="text-neutral-500 text-xs">[ 00 ]</span>
             </Link>
           )}
-          <Link
-            href="/constitution"
-            onClick={() => setMobileMenuOpen(false)}
-            className="font-mono text-sm tracking-widest uppercase text-[#e2f952] flex items-center justify-between border-b border-white/10 pb-2"
-          >
-            <span>CONSTITUTION & CHARTER</span>
-            <span className="text-[#e2f952] text-xs">[ DOC ]</span>
-          </Link>
-          {header.navLinks.map((link, idx) => {
-            const anchor = `#${link.toLowerCase().replace(/\s+/g, "-")}`;
-            const href = isSubpage ? `/${anchor}` : anchor;
+          {header.navLinks.map((item) => {
+            const isActive = pathname === item.href;
             return (
-              <a
-                key={link}
-                href={href}
+              <Link
+                key={item.href}
+                href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="font-mono text-sm tracking-widest uppercase text-neutral-300 hover:text-[#e2f952] flex items-center justify-between border-b border-white/10 pb-2"
+                className={`font-mono text-sm tracking-widest uppercase flex items-center justify-between border-b border-white/10 pb-2 transition-colors ${isActive ? "text-[#e2f952]" : "text-neutral-300 hover:text-[#e2f952]"
+                  }`}
               >
-                <span>{link}</span>
-                <span className="text-neutral-600 text-xs">[ 0{idx + 1} ]</span>
-              </a>
+                <span>{item.label}</span>
+                <span className="text-neutral-600 text-xs">[ {item.code} ]</span>
+              </Link>
             );
           })}
         </div>

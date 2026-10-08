@@ -11,6 +11,7 @@ import {
   generateProjectSlug,
   SupabaseProject,
 } from "@/lib/supabase/projects";
+import { siteData, ProjectWeeklyDetail, WeeklyUpdateStatus } from "@/data/data";
 
 export default function AdminProjectsManager() {
   const [projects, setProjects] = useState<SupabaseProject[]>([]);
@@ -52,6 +53,19 @@ export default function AdminProjectsManager() {
   const [editDisplayOrder, setEditDisplayOrder] = useState<number>(0);
   const [uploadingEditCover, setUploadingEditCover] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Weekly Project Details states for edit modal
+  const [editWeeklyUpdates, setEditWeeklyUpdates] = useState<ProjectWeeklyDetail[]>([]);
+  const [isWeeklyEditorOpen, setIsWeeklyEditorOpen] = useState(false);
+  const [editingWeeklyIndex, setEditingWeeklyIndex] = useState<number | null>(null);
+  const [weeklyNumber, setWeeklyNumber] = useState("");
+  const [weeklyDateRange, setWeeklyDateRange] = useState("");
+  const [weeklyTitle, setWeeklyTitle] = useState("");
+  const [weeklyStatus, setWeeklyStatus] = useState<WeeklyUpdateStatus>("COMPLETED");
+  const [weeklySummary, setWeeklySummary] = useState("");
+  const [weeklyHighlightsInput, setWeeklyHighlightsInput] = useState("");
+  const [weeklyFlightHours, setWeeklyFlightHours] = useState("");
+  const [weeklyBlockers, setWeeklyBlockers] = useState("");
 
   // RLS SQL Helper state
   const [showSqlHelper, setShowSqlHelper] = useState(false);
@@ -206,12 +220,139 @@ export default function AdminProjectsManager() {
     setEditStackInput((project.stack || []).join(", "));
     setEditSlug(project.slug || "");
     setEditDisplayOrder(project.display_order ?? 0);
+
+    // Load weekly updates: check project first, then siteData fallback
+    let initialWeekly: ProjectWeeklyDetail[] = [];
+    if (project.weekly_updates && project.weekly_updates.length > 0) {
+      initialWeekly = [...project.weekly_updates];
+    } else {
+      const cleanSlug = project.slug?.toLowerCase().trim();
+      for (const [key, detail] of Object.entries(siteData.projectDetails)) {
+        if (cleanSlug && (cleanSlug.includes(key) || key.includes(cleanSlug))) {
+          if (detail.weeklyUpdates && detail.weeklyUpdates.length > 0) {
+            initialWeekly = [...detail.weeklyUpdates];
+            break;
+          }
+        }
+      }
+    }
+    setEditWeeklyUpdates(initialWeekly);
+    setIsWeeklyEditorOpen(false);
+    setEditingWeeklyIndex(null);
   };
 
   const closeEditModal = () => {
     if (savingEdit) return;
     setEditingProject(null);
     setUploadingEditCover(false);
+    setIsWeeklyEditorOpen(false);
+    setEditingWeeklyIndex(null);
+  };
+
+  // Weekly updates entry handlers
+  const handleStartAddWeekly = () => {
+    const nextNum = editWeeklyUpdates.length + 1;
+    const formattedNum = nextNum < 10 ? `Week 0${nextNum}` : `Week ${nextNum}`;
+    setWeeklyNumber(formattedNum);
+    setWeeklyDateRange("");
+    setWeeklyTitle("");
+    setWeeklyStatus("COMPLETED");
+    setWeeklySummary("");
+    setWeeklyHighlightsInput("");
+    setWeeklyFlightHours("");
+    setWeeklyBlockers("");
+    setEditingWeeklyIndex(null);
+    setIsWeeklyEditorOpen(true);
+  };
+
+  const handleStartEditWeekly = (idx: number) => {
+    const item = editWeeklyUpdates[idx];
+    if (!item) return;
+    setWeeklyNumber(item.weekNumber || "");
+    setWeeklyDateRange(item.dateRange || "");
+    setWeeklyTitle(item.title || "");
+    setWeeklyStatus(item.status || "COMPLETED");
+    setWeeklySummary(item.summary || "");
+    setWeeklyHighlightsInput((item.highlights || []).join("\n"));
+    setWeeklyFlightHours(item.flightHoursOrTests || "");
+    setWeeklyBlockers(item.blockersOrRisks || "");
+    setEditingWeeklyIndex(idx);
+    setIsWeeklyEditorOpen(true);
+  };
+
+  const handleCancelWeeklyEditor = () => {
+    setIsWeeklyEditorOpen(false);
+    setEditingWeeklyIndex(null);
+  };
+
+  const handleSaveWeeklyEntry = (e: React.MouseEvent | React.FormEvent) => {
+    e.preventDefault();
+    if (!weeklyNumber.trim()) {
+      setStatusMessage({ type: "error", text: "WEEK IDENTIFIER IS REQUIRED (E.G. 'Week 05')" });
+      return;
+    }
+    if (!weeklyTitle.trim()) {
+      setStatusMessage({ type: "error", text: "WEEKLY SPRINT TITLE IS REQUIRED" });
+      return;
+    }
+    if (!weeklySummary.trim()) {
+      setStatusMessage({ type: "error", text: "WEEKLY PROGRESS SUMMARY IS REQUIRED" });
+      return;
+    }
+
+    const highlights = weeklyHighlightsInput
+      .split("\n")
+      .flatMap((line) => line.split(","))
+      .map((s) => s.trim().replace(/^[-*•✓]\s*/, ""))
+      .filter((s) => s.length > 0);
+
+    const newEntry: ProjectWeeklyDetail = {
+      id: editingWeeklyIndex !== null
+        ? editWeeklyUpdates[editingWeeklyIndex]?.id || `week-${Date.now()}`
+        : `week-${Date.now()}`,
+      weekNumber: weeklyNumber.trim(),
+      dateRange: weeklyDateRange.trim() || "Active Sprint",
+      title: weeklyTitle.trim(),
+      summary: weeklySummary.trim(),
+      status: weeklyStatus,
+      highlights: highlights.length > 0 ? highlights : undefined,
+      flightHoursOrTests: weeklyFlightHours.trim() || undefined,
+      blockersOrRisks: weeklyBlockers.trim() || undefined,
+    };
+
+    if (editingWeeklyIndex !== null) {
+      setEditWeeklyUpdates((prev) =>
+        prev.map((item, i) => (i === editingWeeklyIndex ? newEntry : item))
+      );
+      setStatusMessage({ type: "success", text: `SPRINT ENTRY [ ${newEntry.weekNumber.toUpperCase()} ] UPDATED` });
+    } else {
+      setEditWeeklyUpdates((prev) => [newEntry, ...prev]);
+      setStatusMessage({ type: "success", text: `NEW SPRINT ENTRY [ ${newEntry.weekNumber.toUpperCase()} ] LOGGED` });
+    }
+
+    setIsWeeklyEditorOpen(false);
+    setEditingWeeklyIndex(null);
+    setTimeout(() => setStatusMessage(null), 3000);
+  };
+
+  const handleDeleteWeekly = (idx: number) => {
+    setEditWeeklyUpdates((prev) => prev.filter((_, i) => i !== idx));
+    if (editingWeeklyIndex === idx) {
+      setIsWeeklyEditorOpen(false);
+      setEditingWeeklyIndex(null);
+    }
+  };
+
+  const handleMoveWeekly = (idx: number, direction: "up" | "down") => {
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= editWeeklyUpdates.length) return;
+    setEditWeeklyUpdates((prev) => {
+      const copy = [...prev];
+      const temp = copy[idx];
+      copy[idx] = copy[targetIdx];
+      copy[targetIdx] = temp;
+      return copy;
+    });
   };
 
   // Upload cover specifically in edit modal
@@ -293,6 +434,7 @@ export default function AdminProjectsManager() {
       stack: stackArray,
       slug: editSlug.trim() || generateProjectSlug(editTitle),
       display_order: editDisplayOrder,
+      weekly_updates: editWeeklyUpdates,
     };
 
     // Optimistically update React state
@@ -303,6 +445,7 @@ export default function AdminProjectsManager() {
               ...p,
               ...payload,
               stack: stackArray,
+              weekly_updates: editWeeklyUpdates,
             }
           : p
       )
@@ -316,7 +459,7 @@ export default function AdminProjectsManager() {
         type: "success",
         text: res.isRlsError
           ? "PROJECT UPDATES SAVED (CACHED LOCALLY — RUN RLS SQL SCRIPT IN SUPABASE TO ENABLE DIRECT WRITES)"
-          : "PROJECT SPECIFICATIONS UPDATED & SAVED IN DATABASE SUCCESSFULLY",
+          : "PROJECT SPECIFICATIONS & WEEKLY CADENCE SAVED SUCCESSFULLY",
       });
       if (res.isRlsError) {
         setShowSqlHelper(true);
@@ -873,7 +1016,7 @@ CREATE POLICY "Allow public delete projects" ON public.projects FOR DELETE TO an
             if (e.target === e.currentTarget) closeEditModal();
           }}
         >
-          <div className="bg-neutral-950 border-2 border-[#e2f952] max-w-4xl w-full p-6 sm:p-8 my-auto relative shadow-[0_0_50px_rgba(226,249,82,0.2)] animate-in fade-in duration-200">
+          <div className="bg-neutral-950 border-2 border-[#e2f952] max-w-4xl w-full p-6 sm:p-8 my-auto relative shadow-[0_0_50px_rgba(226,249,82,0.2)] animate-in fade-in duration-200 max-h-[90vh] overflow-y-auto">
             {/* Corner Reticle Accents */}
             <span className="absolute top-2 left-2 w-2 h-2 border-t-2 border-l-2 border-[#e2f952] pointer-events-none" />
             <span className="absolute top-2 right-2 w-2 h-2 border-t-2 border-r-2 border-[#e2f952] pointer-events-none" />
@@ -1101,6 +1244,304 @@ CREATE POLICY "Allow public delete projects" ON public.projects FOR DELETE TO an
                     min={0}
                     className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-4 py-3 outline-none transition-colors"
                   />
+                </div>
+              </div>
+
+              {/* Row 6: Weekly Project Details & Sprint Cadence */}
+              <div className="pt-6 border-t border-white/10 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900/60 p-4 border border-white/10">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#e2f952] animate-pulse" />
+                      <span className="font-mono text-xs uppercase tracking-widest text-[#e2f952] font-black">
+                        [ 06 // WEEKLY PROJECT DETAILS & SPRINT CADENCE ]
+                      </span>
+                      <span className="px-2 py-0.5 bg-[#e2f952]/10 border border-[#e2f952]/40 text-[#e2f952] font-mono text-[9px] uppercase font-bold">
+                        {editWeeklyUpdates.length} WEEKS RECORDED
+                      </span>
+                    </div>
+                    <p className="font-mono text-[11px] text-neutral-400 mt-1">
+                      Update weekly engineering logs, flight trial results, milestones, and blockers for this project. Published live on the project&apos;s telemetry page.
+                    </p>
+                  </div>
+
+                  {!isWeeklyEditorOpen && (
+                    <button
+                      type="button"
+                      onClick={handleStartAddWeekly}
+                      className="inline-flex items-center gap-1.5 bg-[#e2f952] hover:bg-white text-black font-mono text-xs uppercase tracking-wider font-bold px-3 py-2 transition-colors self-start sm:self-auto shrink-0 shadow-[0_0_15px_rgba(226,249,82,0.2)]"
+                    >
+                      <span>+</span>
+                      <span>ADD WEEKLY LOG</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Weekly Log Inline Form */}
+                {isWeeklyEditorOpen && (
+                  <div className="p-5 bg-black border-2 border-[#e2f952] space-y-4 relative shadow-[0_0_30px_rgba(226,249,82,0.15)] animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                      <span className="font-mono text-xs uppercase tracking-widest text-[#e2f952] font-bold">
+                        {editingWeeklyIndex !== null
+                          ? `[ EDIT WEEKLY SPRINT LOG // ${weeklyNumber.toUpperCase()} ]`
+                          : `[ RECORD NEW WEEKLY SPRINT LOG ]`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleCancelWeeklyEditor}
+                        className="text-neutral-400 hover:text-white font-mono text-xs uppercase"
+                      >
+                        ✕ CANCEL
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block font-mono text-[10px] text-neutral-400 uppercase tracking-wider mb-1">
+                          Week Identifier * (e.g. Week 05)
+                        </label>
+                        <input
+                          type="text"
+                          value={weeklyNumber}
+                          onChange={(e) => setWeeklyNumber(e.target.value)}
+                          placeholder="e.g. Week 05"
+                          className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-3 py-2 outline-none"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-mono text-[10px] text-neutral-400 uppercase tracking-wider mb-1">
+                          Date Range (e.g. Oct 08 - Oct 14, 2026)
+                        </label>
+                        <input
+                          type="text"
+                          value={weeklyDateRange}
+                          onChange={(e) => setWeeklyDateRange(e.target.value)}
+                          placeholder="e.g. Oct 08 - Oct 14, 2026"
+                          className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-3 py-2 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-mono text-[10px] text-neutral-400 uppercase tracking-wider mb-1">
+                          Cadence Status *
+                        </label>
+                        <select
+                          value={weeklyStatus}
+                          onChange={(e) => setWeeklyStatus(e.target.value as WeeklyUpdateStatus)}
+                          className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-3 py-2 outline-none uppercase"
+                        >
+                          <option value="COMPLETED">COMPLETED (Milestone Reached)</option>
+                          <option value="IN_PROGRESS">IN_PROGRESS (Active Sprint)</option>
+                          <option value="TESTING">TESTING (Field / Bench Trials)</option>
+                          <option value="PLANNED">PLANNED (Upcoming Cadence)</option>
+                          <option value="BLOCKED">BLOCKED (Roadblock Encountered)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block font-mono text-[10px] text-neutral-400 uppercase tracking-wider mb-1">
+                        Weekly Sprint Headline / Focus Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={weeklyTitle}
+                        onChange={(e) => setWeeklyTitle(e.target.value)}
+                        placeholder="e.g. Autonomous Waypoint Navigation & Obstacle Avoidance Validation"
+                        className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-3 py-2 outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-mono text-[10px] text-neutral-400 uppercase tracking-wider mb-1">
+                        Detailed Weekly Engineering Summary & Objectives *
+                      </label>
+                      <textarea
+                        value={weeklySummary}
+                        onChange={(e) => setWeeklySummary(e.target.value)}
+                        rows={3}
+                        placeholder="Narrative of the goals accomplished, technical changes to flight controller/software, test conditions..."
+                        className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-3 py-2 outline-none leading-relaxed resize-y"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-mono text-[10px] text-neutral-400 uppercase tracking-wider mb-1">
+                        Key Milestones & Subsystem Deliverables (One per line or comma-separated)
+                      </label>
+                      <textarea
+                        value={weeklyHighlightsInput}
+                        onChange={(e) => setWeeklyHighlightsInput(e.target.value)}
+                        rows={2}
+                        placeholder="• Calibrated ArduPilot EKF3 filters&#10;• Completed 8 autonomous checkpoint sorties&#10;• Verified 18ms inference latency on Jetson"
+                        className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-3 py-2 outline-none resize-y"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-mono text-[10px] text-neutral-400 uppercase tracking-wider mb-1">
+                          Flight Testing Telemetry (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={weeklyFlightHours}
+                          onChange={(e) => setWeeklyFlightHours(e.target.value)}
+                          placeholder="e.g. 5 sorties · 2.4 flight hours logged"
+                          className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-3 py-2 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-mono text-[10px] text-neutral-400 uppercase tracking-wider mb-1">
+                          Roadblock Resolution / Blockers (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={weeklyBlockers}
+                          onChange={(e) => setWeeklyBlockers(e.target.value)}
+                          placeholder="e.g. Mitigated IMU vibration noise using silicone mounts"
+                          className="w-full bg-neutral-900 border border-white/20 focus:border-[#e2f952] text-white font-mono text-xs px-3 py-2 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={handleCancelWeeklyEditor}
+                        className="px-4 py-2 text-neutral-400 hover:text-white font-mono text-xs uppercase border border-white/15"
+                      >
+                        CANCEL
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveWeeklyEntry}
+                        className="px-5 py-2 bg-[#e2f952] hover:bg-white text-black font-mono text-xs uppercase font-bold border border-[#e2f952]"
+                      >
+                        {editingWeeklyIndex !== null ? "SAVE SPRINT ENTRY" : "CONFIRM & ADD SPRINT ENTRY"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Logged Weeks List */}
+                <div className="space-y-3">
+                  {editWeeklyUpdates.length === 0 ? (
+                    <div className="border border-dashed border-white/15 p-6 text-center bg-neutral-900/40">
+                      <p className="font-mono text-xs text-neutral-500 uppercase tracking-wider">
+                        [ NO WEEKLY SPRINT LOGS RECORDED YET. CLICK &apos;+ ADD WEEKLY LOG&apos; TO ADD PROGRESS LOGS. ]
+                      </p>
+                    </div>
+                  ) : (
+                    editWeeklyUpdates.map((item, idx) => (
+                      <div
+                        key={item.id || idx}
+                        className="bg-neutral-900/80 border border-white/15 hover:border-white/30 p-4 transition-colors space-y-2.5 relative group"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-[#e2f952] uppercase">
+                              [ {item.weekNumber} ]
+                            </span>
+                            <span className="font-mono text-[10px] text-neutral-400">
+                              // {item.dateRange}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 font-mono text-[9px] uppercase font-bold border ${
+                                item.status === "COMPLETED"
+                                  ? "border-[#e2f952]/40 text-[#e2f952] bg-[#e2f952]/10"
+                                  : item.status === "IN_PROGRESS"
+                                  ? "border-blue-500/40 text-blue-400 bg-blue-500/10"
+                                  : item.status === "TESTING"
+                                  ? "border-purple-500/40 text-purple-400 bg-purple-500/10"
+                                  : item.status === "BLOCKED"
+                                  ? "border-red-500/40 text-red-400 bg-red-500/10"
+                                  : "border-neutral-500/40 text-neutral-300 bg-neutral-800"
+                              }`}
+                            >
+                              {item.status}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1 font-mono text-[10px]">
+                            <button
+                              type="button"
+                              onClick={() => handleMoveWeekly(idx, "up")}
+                              disabled={idx === 0}
+                              className="px-1.5 py-0.5 border border-white/15 text-neutral-400 hover:text-white disabled:opacity-20"
+                              title="Move earlier"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveWeekly(idx, "down")}
+                              disabled={idx === editWeeklyUpdates.length - 1}
+                              className="px-1.5 py-0.5 border border-white/15 text-neutral-400 hover:text-white disabled:opacity-20"
+                              title="Move later"
+                            >
+                              ↓
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditWeekly(idx)}
+                              className="px-2 py-0.5 border border-[#e2f952]/30 text-[#e2f952] hover:bg-[#e2f952] hover:text-black transition-colors uppercase font-bold"
+                            >
+                              EDIT
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteWeekly(idx)}
+                              className="px-2 py-0.5 border border-red-500/30 text-red-400 hover:bg-red-950/40 transition-colors uppercase"
+                            >
+                              REMOVE
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="font-mono text-xs text-white font-bold uppercase">
+                          {item.title}
+                        </div>
+
+                        <p className="font-mono text-[11px] text-neutral-300 leading-relaxed font-light">
+                          {item.summary}
+                        </p>
+
+                        {item.highlights && item.highlights.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {item.highlights.map((hl, hIdx) => (
+                              <span
+                                key={hIdx}
+                                className="px-2 py-0.5 bg-white/5 border border-white/10 font-mono text-[9px] text-neutral-300"
+                              >
+                                ✓ {hl}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {(item.flightHoursOrTests || item.blockersOrRisks) && (
+                          <div className="flex flex-wrap gap-3 pt-1 text-[10px] font-mono text-neutral-400">
+                            {item.flightHoursOrTests && (
+                              <span className="text-neutral-300">
+                                <strong className="text-[#e2f952]">TELEMETRY:</strong> {item.flightHoursOrTests}
+                              </span>
+                            )}
+                            {item.blockersOrRisks && (
+                              <span className="text-amber-400">
+                                <strong>RESOLUTION:</strong> {item.blockersOrRisks}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 

@@ -191,3 +191,11 @@ CREATE POLICY "Allow public delete projects"
 ON public.projects FOR DELETE 
 TO anon, authenticated 
 USING (true);
+
+-- 7. Add weekly_updates column to projects table (Weekly Sprint & Cadence Details)
+ALTER TABLE public.projects 
+ADD COLUMN IF NOT EXISTS weekly_updates JSONB DEFAULT '[]'::jsonb;
+
+-- Index for weekly_updates queries
+CREATE INDEX IF NOT EXISTS idx_projects_weekly_updates 
+ON public.projects USING gin (weekly_updates);
